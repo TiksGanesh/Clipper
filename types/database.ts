@@ -47,6 +47,46 @@ export type Database = {
                 }
                 Relationships: []
             }
+            working_hours: {
+                Row: {
+                    id: string
+                    shop_id: string
+                    day_of_week: number // 0=Sunday ... 6=Saturday
+                    open_time: string | null // 'HH:MM:SS'
+                    close_time: string | null // 'HH:MM:SS'
+                    is_closed: boolean
+                    created_at: string
+                    updated_at: string
+                }
+                Insert: {
+                    id?: string
+                    shop_id: string
+                    day_of_week: number
+                    open_time?: string | null
+                    close_time?: string | null
+                    is_closed?: boolean
+                    created_at?: string
+                    updated_at?: string
+                }
+                Update: {
+                    id?: string
+                    shop_id?: string
+                    day_of_week?: number
+                    open_time?: string | null
+                    close_time?: string | null
+                    is_closed?: boolean
+                    created_at?: string
+                    updated_at?: string
+                }
+                Relationships: [
+                    {
+                        foreignKeyName: "working_hours_shop_id_fkey"
+                        columns: ["shop_id"]
+                        referencedRelation: "shops"
+                        referencedColumns: ["id"]
+                    }
+                ]
+            }
             barbers: {
                 Row: {
                     id: string
