@@ -1,6 +1,5 @@
 import { createBrowserClient } from '@supabase/ssr'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import type { Database } from '@/types/database'
 
 /**
@@ -19,6 +18,7 @@ export function createClient() {
  * This uses cookies for session management (read-only)
  */
 export async function createServerSupabaseClient() {
+    const { cookies } = await import('next/headers')
     const cookieStore = await cookies()
 
     return createServerClient<Database>(
@@ -50,6 +50,7 @@ export async function createServerSupabaseClient() {
  * This uses cookies for session management (read-write)
  */
 export async function createServerActionClient() {
+    const { cookies } = await import('next/headers')
     const cookieStore = await cookies()
 
     return createServerClient<Database>(

@@ -1,6 +1,7 @@
 import { requireAuth } from '@/lib/auth'
-import { createServerActionClient, createServerSupabaseClient } from '@/lib/supabase'
+import { createServerSupabaseClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
+import { saveBarbersAction } from '@/app/setup/actions'
 
 export default async function SetupBarbersPage() {
     const user = await requireAuth()
@@ -15,43 +16,6 @@ export default async function SetupBarbersPage() {
 
     if (!shop?.id) {
         redirect('/setup/shop')
-    }
-
-    async function saveBarbersAction(formData: FormData) {
-        'use server'
-        const supabase = await createServerActionClient()
-
-        const names = [
-            (formData.get('barber1') as string)?.trim(),
-            (formData.get('barber2') as string)?.trim(),
-        ].filter(Boolean) as string[]
-
-        const phones = [
-            (formData.get('phone1') as string)?.trim(),
-            (formData.get('phone2') as string)?.trim(),
-        ]
-
-        if (names.length === 0) {
-            throw new Error('Add at least one barber')
-        }
-
-        if (names.length > 2) {
-            throw new Error('Maximum 2 barbers allowed')
-        }
-
-        const rows = names.map((name, idx) => ({
-            shop_id: shop!.id,
-            name,
-            phone: phones[idx] || null,
-            is_active: true,
-        }))
-
-        const { error } = await supabase.from('barbers').insert(rows)
-        if (error) {
-            throw new Error(error.message)
-        }
-
-        redirect('/setup/hours')
     }
 
     return (

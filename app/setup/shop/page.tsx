@@ -1,51 +1,23 @@
 import { requireAuth } from '@/lib/auth'
-import { createServerActionClient } from '@/lib/supabase'
-import { redirect } from 'next/navigation'
+import { createShopAction } from '@/app/setup/actions'
 
-export default async function SetupShopPage() {
-    const user = await requireAuth()
-
-    async function createShopAction(formData: FormData) {
-        'use server'
-        const supabase = await createServerActionClient()
-
-        const name = (formData.get('name') as string)?.trim()
-        const phone = (formData.get('phone') as string)?.trim()
-        const address = (formData.get('address') as string)?.trim() || null
-
-        if (!name || !phone) {
-            throw new Error('Name and phone are required')
-        }
-
-        // If shop already exists for this owner, redirect to next step
-        const { data: existing } = await supabase
-            .from('shops')
-            .select('id')
-            .eq('owner_id', user.id)
-            .is('deleted_at', null)
-            .maybeSingle()
-
-        if (existing?.id) {
-            redirect('/setup/barbers')
-        }
-
-        const { error } = await supabase.from('shops').insert({
-            owner_id: user.id,
-            name,
-            phone,
-            address,
-        })
-
-        if (error) {
-            throw new Error(error.message)
-        }
-
-        redirect('/setup/barbers')
-    }
+export default async function SetupShopPage({
+    searchParams,
+}: {
+    searchParams: { error?: string }
+}) {
+    await requireAuth()
 
     return (
         <div className="max-w-lg mx-auto py-10">
             <h1 className="text-2xl font-bold mb-6">Step 1: Create Shop</h1>
+            
+            {searchParams.error && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded">
+                    {searchParams.error}
+                </div>
+            )}
+            
             <form action={createShopAction} className="space-y-4">
                 <div>
                     <label className="block text-sm font-medium">Shop Name</label>

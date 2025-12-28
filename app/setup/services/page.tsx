@@ -1,6 +1,7 @@
 import { requireAuth } from '@/lib/auth'
-import { createServerActionClient, createServerSupabaseClient } from '@/lib/supabase'
+import { createServerSupabaseClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
+import { saveServicesAction } from '@/app/setup/actions'
 
 export default async function SetupServicesPage() {
     const user = await requireAuth()
@@ -11,39 +12,10 @@ export default async function SetupServicesPage() {
         .select('id')
         .eq('owner_id', user.id)
         .is('deleted_at', null)
-        .maybeSingle()
+        .maybeSingle<{ id: string }>()
 
     if (!shop?.id) {
         redirect('/setup/shop')
-    }
-
-    async function saveServicesAction(formData: FormData) {
-        'use server'
-        const supabase = await createServerActionClient()
-
-        // Collect arrays from form fields: name[], duration[], price[]
-        const names = formData.getAll('service_name').map((v) => (v as string).trim()).filter(Boolean)
-        const durations = formData.getAll('service_duration').map((v) => Number(v))
-        const prices = formData.getAll('service_price').map((v) => Number(v))
-
-        if (names.length === 0) {
-            throw new Error('Add at least one service')
-        }
-
-        const rows = names.map((name, idx) => ({
-            shop_id: shop!.id,
-            name,
-            duration_minutes: Math.max(1, Math.floor(durations[idx] || 0)),
-            price: Math.max(0, prices[idx] || 0),
-            is_active: true,
-        }))
-
-        const { error } = await supabase.from('services').insert(rows)
-        if (error) {
-            throw new Error(error.message)
-        }
-
-        redirect('/dashboard')
     }
 
     return (
@@ -66,11 +38,12 @@ export default async function SetupServicesPage() {
                         </div>
                     </div>
                 </div>
-                <button formAction={saveServicesAction} className="w-full bg-blue-600 text-white py-2 rounded">
+                <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded">
                     Save and Finish
                 </button>
             </form>
-            <script dangerouslySetInnerHTML={{ __html: `
+            <script dangerouslySetInnerHTML={{
+                __html: `
                 (function(){
                     const list = document.getElementById('service-list');
                     const addBtn = document.createElement('button');
@@ -80,25 +53,12 @@ export default async function SetupServicesPage() {
                     addBtn.onclick = function(){
                         const row = document.createElement('div');
                         row.className = 'grid grid-cols-3 gap-3';
-                        row.innerHTML = `
-                            <div>
-                                <label class='block text-sm'>Name</label>
-                                <input name='service_name' required class='mt-1 w-full border px-3 py-2 rounded' />
-                            </div>
-                            <div>
-                                <label class='block text-sm'>Duration (minutes)</label>
-                                <input name='service_duration' type='number' min='1' required class='mt-1 w-full border px-3 py-2 rounded' />
-                            </div>
-                            <div>
-                                <label class='block text-sm'>Price</label>
-                                <input name='service_price' type='number' min='0' step='0.01' required class='mt-1 w-full border px-3 py-2 rounded' />
-                            </div>
-                        `;
+                        row.innerHTML = '<div><label class="block text-sm">Name</label><input name="service_name" required class="mt-1 w-full border px-3 py-2 rounded" /></div><div><label class="block text-sm">Duration (minutes)</label><input name="service_duration" type="number" min="1" required class="mt-1 w-full border px-3 py-2 rounded" /></div><div><label class="block text-sm">Price</label><input name="service_price" type="number" min="0" step="0.01" required class="mt-1 w-full border px-3 py-2 rounded" /></div>';
                         list.appendChild(row);
                     };
                     list.parentElement.appendChild(addBtn);
                 })();
             ` }} />
-        </div >
+        </div>
     )
 }

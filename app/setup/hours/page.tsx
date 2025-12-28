@@ -1,6 +1,7 @@
 import { requireAuth } from '@/lib/auth'
-import { createServerActionClient, createServerSupabaseClient } from '@/lib/supabase'
+import { createServerSupabaseClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
+import { saveHoursAction } from '@/app/setup/actions'
 
 const days = [
     { key: 0, label: 'Sunday' },
@@ -25,34 +26,6 @@ export default async function SetupHoursPage() {
 
     if (!shop?.id) {
         redirect('/setup/shop')
-    }
-
-    async function saveHoursAction(formData: FormData) {
-        'use server'
-        const supabase = await createServerActionClient()
-        const rows = days.map((d) => {
-            const isClosed = formData.get(`closed_${d.key}`) === 'on'
-            const open = (formData.get(`open_${d.key}`) as string) || null
-            const close = (formData.get(`close_${d.key}`) as string) || null
-            return {
-                shop_id: shop!.id,
-                day_of_week: d.key,
-                is_closed: isClosed,
-                open_time: isClosed ? null : (open ? `${open}:00` : null),
-                close_time: isClosed ? null : (close ? `${close}:00` : null),
-            }
-        })
-
-        // Upsert working hours for all days
-        const { error } = await supabase
-            .from('working_hours')
-            .upsert(rows, { onConflict: 'shop_id,day_of_week' })
-
-        if (error) {
-            throw new Error(error.message)
-        }
-
-        redirect('/setup/services')
     }
 
     return (
