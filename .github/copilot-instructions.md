@@ -128,3 +128,4 @@ Do not suggest alternative frameworks or databases.
 - Include comments for complex logic
 - Write unit tests for critical functions
 - Ensure code is ready for production deployment
+- Update documentation and README as needed

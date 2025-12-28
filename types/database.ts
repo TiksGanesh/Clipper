@@ -1,0 +1,315 @@
+/**
+ * Database types generated from Supabase schema
+ * Run: npx supabase gen types typescript --project-id YOUR_PROJECT_ID > types/database.ts
+ */
+
+export type Json =
+    | string
+    | number
+    | boolean
+    | null
+    | { [key: string]: Json | undefined }
+    | Json[]
+
+export type Database = {
+    public: {
+        Tables: {
+            shops: {
+                Row: {
+                    id: string
+                    owner_id: string
+                    name: string
+                    phone: string
+                    address: string | null
+                    deleted_at: string | null
+                    created_at: string
+                    updated_at: string
+                }
+                Insert: {
+                    id?: string
+                    owner_id: string
+                    name: string
+                    phone: string
+                    address?: string | null
+                    deleted_at?: string | null
+                    created_at?: string
+                    updated_at?: string
+                }
+                Update: {
+                    id?: string
+                    owner_id?: string
+                    name?: string
+                    phone?: string
+                    address?: string | null
+                    deleted_at?: string | null
+                    created_at?: string
+                    updated_at?: string
+                }
+                Relationships: []
+            }
+            barbers: {
+                Row: {
+                    id: string
+                    shop_id: string
+                    name: string
+                    phone: string | null
+                    is_active: boolean
+                    deleted_at: string | null
+                    created_at: string
+                    updated_at: string
+                }
+                Insert: {
+                    id?: string
+                    shop_id: string
+                    name: string
+                    phone?: string | null
+                    is_active?: boolean
+                    deleted_at?: string | null
+                    created_at?: string
+                    updated_at?: string
+                }
+                Update: {
+                    id?: string
+                    shop_id?: string
+                    name?: string
+                    phone?: string | null
+                    is_active?: boolean
+                    deleted_at?: string | null
+                    created_at?: string
+                    updated_at?: string
+                }
+                Relationships: [
+                    {
+                        foreignKeyName: "barbers_shop_id_fkey"
+                        columns: ["shop_id"]
+                        referencedRelation: "shops"
+                        referencedColumns: ["id"]
+                    }
+                ]
+            }
+            services: {
+                Row: {
+                    id: string
+                    shop_id: string
+                    name: string
+                    duration_minutes: number
+                    price: number
+                    is_active: boolean
+                    deleted_at: string | null
+                    created_at: string
+                    updated_at: string
+                }
+                Insert: {
+                    id?: string
+                    shop_id: string
+                    name: string
+                    duration_minutes: number
+                    price: number
+                    is_active?: boolean
+                    deleted_at?: string | null
+                    created_at?: string
+                    updated_at?: string
+                }
+                Update: {
+                    id?: string
+                    shop_id?: string
+                    name?: string
+                    duration_minutes?: number
+                    price?: number
+                    is_active?: boolean
+                    deleted_at?: string | null
+                    created_at?: string
+                    updated_at?: string
+                }
+                Relationships: [
+                    {
+                        foreignKeyName: "services_shop_id_fkey"
+                        columns: ["shop_id"]
+                        referencedRelation: "shops"
+                        referencedColumns: ["id"]
+                    }
+                ]
+            }
+            bookings: {
+                Row: {
+                    id: string
+                    shop_id: string
+                    barber_id: string
+                    service_id: string
+                    customer_name: string
+                    customer_phone: string
+                    start_time: string
+                    end_time: string
+                    status: 'confirmed' | 'completed' | 'canceled' | 'no_show'
+                    is_walk_in: boolean
+                    notes: string | null
+                    deleted_at: string | null
+                    created_at: string
+                    updated_at: string
+                }
+                Insert: {
+                    id?: string
+                    shop_id: string
+                    barber_id: string
+                    service_id: string
+                    customer_name: string
+                    customer_phone: string
+                    start_time: string
+                    end_time: string
+                    status?: 'confirmed' | 'completed' | 'canceled' | 'no_show'
+                    is_walk_in?: boolean
+                    notes?: string | null
+                    deleted_at?: string | null
+                    created_at?: string
+                    updated_at?: string
+                }
+                Update: {
+                    id?: string
+                    shop_id?: string
+                    barber_id?: string
+                    service_id?: string
+                    customer_name?: string
+                    customer_phone?: string
+                    start_time?: string
+                    end_time?: string
+                    status?: 'confirmed' | 'completed' | 'canceled' | 'no_show'
+                    is_walk_in?: boolean
+                    notes?: string | null
+                    deleted_at?: string | null
+                    created_at?: string
+                    updated_at?: string
+                }
+                Relationships: [
+                    {
+                        foreignKeyName: "bookings_shop_id_fkey"
+                        columns: ["shop_id"]
+                        referencedRelation: "shops"
+                        referencedColumns: ["id"]
+                    },
+                    {
+                        foreignKeyName: "bookings_barber_id_fkey"
+                        columns: ["barber_id"]
+                        referencedRelation: "barbers"
+                        referencedColumns: ["id"]
+                    },
+                    {
+                        foreignKeyName: "bookings_service_id_fkey"
+                        columns: ["service_id"]
+                        referencedRelation: "services"
+                        referencedColumns: ["id"]
+                    }
+                ]
+            }
+            subscriptions: {
+                Row: {
+                    id: string
+                    shop_id: string
+                    razorpay_subscription_id: string | null
+                    razorpay_plan_id: string | null
+                    status: 'trial' | 'active' | 'past_due' | 'canceled' | 'expired'
+                    trial_ends_at: string | null
+                    current_period_start: string | null
+                    current_period_end: string | null
+                    canceled_at: string | null
+                    deleted_at: string | null
+                    created_at: string
+                    updated_at: string
+                }
+                Insert: {
+                    id?: string
+                    shop_id: string
+                    razorpay_subscription_id?: string | null
+                    razorpay_plan_id?: string | null
+                    status?: 'trial' | 'active' | 'past_due' | 'canceled' | 'expired'
+                    trial_ends_at?: string | null
+                    current_period_start?: string | null
+                    current_period_end?: string | null
+                    canceled_at?: string | null
+                    deleted_at?: string | null
+                    created_at?: string
+                    updated_at?: string
+                }
+                Update: {
+                    id?: string
+                    shop_id?: string
+                    razorpay_subscription_id?: string | null
+                    razorpay_plan_id?: string | null
+                    status?: 'trial' | 'active' | 'past_due' | 'canceled' | 'expired'
+                    trial_ends_at?: string | null
+                    current_period_start?: string | null
+                    current_period_end?: string | null
+                    canceled_at?: string | null
+                    deleted_at?: string | null
+                    created_at?: string
+                    updated_at?: string
+                }
+                Relationships: [
+                    {
+                        foreignKeyName: "subscriptions_shop_id_fkey"
+                        columns: ["shop_id"]
+                        referencedRelation: "shops"
+                        referencedColumns: ["id"]
+                    }
+                ]
+            }
+        }
+        Views: {
+            active_shops: {
+                Row: {
+                    id: string
+                    owner_id: string
+                    name: string
+                    phone: string
+                    address: string | null
+                    created_at: string
+                    updated_at: string
+                }
+            }
+            active_barbers: {
+                Row: {
+                    id: string
+                    shop_id: string
+                    name: string
+                    phone: string | null
+                    is_active: boolean
+                    created_at: string
+                    updated_at: string
+                }
+            }
+            active_services: {
+                Row: {
+                    id: string
+                    shop_id: string
+                    name: string
+                    duration_minutes: number
+                    price: number
+                    is_active: boolean
+                    created_at: string
+                    updated_at: string
+                }
+            }
+            active_bookings: {
+                Row: {
+                    id: string
+                    shop_id: string
+                    barber_id: string
+                    service_id: string
+                    customer_name: string
+                    customer_phone: string
+                    start_time: string
+                    end_time: string
+                    status: 'confirmed' | 'completed' | 'canceled' | 'no_show'
+                    is_walk_in: boolean
+                    notes: string | null
+                    created_at: string
+                    updated_at: string
+                }
+            }
+        }
+        Functions: {}
+        Enums: {
+            subscription_status: 'trial' | 'active' | 'past_due' | 'canceled' | 'expired'
+            booking_status: 'confirmed' | 'completed' | 'canceled' | 'no_show'
+        }
+    }
+}
