@@ -2,6 +2,7 @@ import { requireAuth } from '@/lib/auth'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
 import { saveHoursAction } from '@/app/setup/actions'
+import type { Database } from '@/types/database'
 
 const days = [
     { key: 0, label: 'Sunday' },
@@ -17,12 +18,14 @@ export default async function SetupHoursPage() {
     const user = await requireAuth()
     const supabase = await createServerSupabaseClient()
 
+    type ShopId = Pick<Database['public']['Tables']['shops']['Row'], 'id'>
+
     const { data: shop } = await supabase
         .from('shops')
         .select('id')
         .eq('owner_id', user.id)
         .is('deleted_at', null)
-        .maybeSingle()
+        .maybeSingle<ShopId>()
 
     if (!shop?.id) {
         redirect('/setup/shop')

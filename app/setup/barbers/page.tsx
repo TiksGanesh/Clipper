@@ -2,17 +2,20 @@ import { requireAuth } from '@/lib/auth'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
 import { saveBarbersAction } from '@/app/setup/actions'
+import type { Database } from '@/types/database'
 
 export default async function SetupBarbersPage() {
     const user = await requireAuth()
     const supabase = await createServerSupabaseClient()
+
+    type ShopId = Pick<Database['public']['Tables']['shops']['Row'], 'id'>
 
     const { data: shop } = await supabase
         .from('shops')
         .select('id')
         .eq('owner_id', user.id)
         .is('deleted_at', null)
-        .maybeSingle()
+        .maybeSingle<ShopId>()
 
     if (!shop?.id) {
         redirect('/setup/shop')
