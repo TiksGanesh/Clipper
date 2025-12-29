@@ -47,19 +47,19 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Some services not found' }, { status: 400 })
         }
 
-        if (services.some((s) => s.deleted_at || s.is_active === false)) {
+        if ((services as any[]).some((s) => s.deleted_at || s.is_active === false)) {
             return NextResponse.json({ error: 'Some services are inactive' }, { status: 400 })
         }
 
         // All services must be same shop
-        shopId = services[0].shop_id
-        if (services.some((s) => s.shop_id !== shopId)) {
+        shopId = (services as any[])[0].shop_id
+        if ((services as any[]).some((s) => s.shop_id !== shopId)) {
             return NextResponse.json({ error: 'Services must belong to the same shop' }, { status: 400 })
         }
 
-        resolvedServices = services.map((s) => ({ id: s.id, shop_id: s.shop_id, duration_minutes: s.duration_minutes }))
-        totalDuration = services.reduce((sum, s) => sum + (s.duration_minutes || 0), 0)
-        primaryServiceId = services[0].id
+        resolvedServices = (services as any[]).map((s) => ({ id: s.id, shop_id: s.shop_id, duration_minutes: s.duration_minutes }))
+        totalDuration = (services as any[]).reduce((sum, s) => sum + (s.duration_minutes || 0), 0)
+        primaryServiceId = (services as any[])[0].id
     } else {
         // Fallback: single service_id path
         if (!service_id) {
@@ -73,13 +73,13 @@ export async function POST(req: Request) {
         if (serviceError) {
             return NextResponse.json({ error: 'Failed to fetch service' }, { status: 500 })
         }
-        if (!service || service.deleted_at || service.is_active === false) {
+        if (!service || (service as any).deleted_at || (service as any).is_active === false) {
             return NextResponse.json({ error: 'Service not available' }, { status: 400 })
         }
-        shopId = service.shop_id
-        totalDuration = service.duration_minutes
-        primaryServiceId = service.id
-        resolvedServices = [{ id: service.id, shop_id: service.shop_id, duration_minutes: service.duration_minutes }]
+        shopId = (service as any).shop_id
+        totalDuration = (service as any).duration_minutes
+        primaryServiceId = (service as any).id
+        resolvedServices = [{ id: (service as any).id, shop_id: (service as any).shop_id, duration_minutes: (service as any).duration_minutes }]
     }
 
     // Validate barber belongs to same shop and is active
@@ -93,7 +93,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Failed to fetch barber' }, { status: 500 })
     }
 
-    if (!barber || barber.deleted_at || barber.is_active === false || barber.shop_id !== shopId) {
+    if (!barber || (barber as any).deleted_at || (barber as any).is_active === false || (barber as any).shop_id !== shopId) {
         return NextResponse.json({ error: 'Barber not available for this shop' }, { status: 400 })
     }
 

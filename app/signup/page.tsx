@@ -77,7 +77,7 @@ export default function SignupPage() {
                             Check your email
                         </h3>
                         <p className="text-sm text-green-700">
-                            We've sent you a confirmation email. Please check your inbox and click the
+                            We have sent you a confirmation email. Please check your inbox and click the
                             confirmation link to activate your account.
                         </p>
                     </div>

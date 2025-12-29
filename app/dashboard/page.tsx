@@ -1,6 +1,20 @@
 import { requireAuth } from '@/lib/auth'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
+import WalkInForm from '@/components/booking/WalkInForm'
+import DashboardContent from './dashboard-content'
+
+type Barber = {
+    id: string
+    name: string
+}
+
+type Service = {
+    id: string
+    name: string
+    duration_minutes: number
+    price: number
+}
 
 export default async function DashboardPage() {
     const user = await requireAuth()
@@ -19,10 +33,22 @@ export default async function DashboardPage() {
         redirect('/setup/shop')
     }
 
-    const [{ count: barberCount }, { count: servicesCount }, { count: hoursCount }] = await Promise.all([
+    const [{ count: barberCount }, { count: servicesCount }, { count: hoursCount }, { data: barbers }, { data: services }] = await Promise.all([
         supabase.from('barbers').select('id', { count: 'exact', head: true }).eq('shop_id', shopId).is('deleted_at', null),
         supabase.from('services').select('id', { count: 'exact', head: true }).eq('shop_id', shopId).is('deleted_at', null),
         supabase.from('working_hours').select('id', { count: 'exact', head: true }).eq('shop_id', shopId),
+        supabase
+            .from('barbers')
+            .select('id, name')
+            .eq('shop_id', shopId)
+            .is('deleted_at', null)
+            .order('name'),
+        supabase
+            .from('services')
+            .select('id, name, duration_minutes, price')
+            .eq('shop_id', shopId)
+            .is('deleted_at', null)
+            .order('name'),
     ])
 
     if (!barberCount || barberCount < 1) {
@@ -44,8 +70,14 @@ export default async function DashboardPage() {
                         <div className="flex items-center">
                             <h1 className="text-xl font-bold text-gray-900">Clipper Dashboard</h1>
                         </div>
-                        <div className="flex items-center">
-                            <span className="text-sm text-gray-600 mr-4">{user.email}</span>
+                            <div className="flex items-center gap-4">
+                                <a
+                                    href="#walk-in-form"
+                                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md transition"
+                                >
+                                    + Book Walk-In
+                                </a>
+                                <span className="text-sm text-gray-600">{user.email}</span>
                             <form action="/api/auth/signout" method="POST">
                                 <button
                                     type="submit"
@@ -60,44 +92,35 @@ export default async function DashboardPage() {
             </nav>
 
             <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-                <div className="px-4 py-6 sm:px-0">
-                    <div className="border-4 border-dashed border-gray-200 rounded-lg p-8">
-                        <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                            Welcome to your dashboard
-                        </h2>
-                        <p className="text-gray-600">
-                            You're now authenticated! This is a protected route.
-                        </p>
-                        <div className="mt-6 bg-blue-50 p-4 rounded-md">
-                            <h3 className="text-sm font-medium text-blue-800 mb-2">
-                                User Information
-                            </h3>
-                            <dl className="space-y-1">
-                                <div>
-                                    <dt className="text-xs text-blue-600">Email:</dt>
-                                    <dd className="text-sm text-blue-900">{user.email}</dd>
-                                </div>
-                                <div>
-                                    <dt className="text-xs text-blue-600">User ID:</dt>
-                                    <dd className="text-sm text-blue-900 font-mono text-xs">{user.id}</dd>
-                                </div>
-                                {user.user_metadata?.shop_name && (
-                                    <div>
-                                        <dt className="text-xs text-blue-600">Shop Name:</dt>
-                                        <dd className="text-sm text-blue-900">{user.user_metadata.shop_name}</dd>
-                                    </div>
-                                )}
-                            </dl>
-                        <div className="mt-6">
-                            <a
-                                href="/dashboard/services"
-                                className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md"
-                            >
-                                Manage Services
-                            </a>
-                        </div>
+                <div className="px-4 py-6 sm:px-0 space-y-6">
+                    {/* Welcome Section */}
+                    <div className="bg-white rounded-lg shadow-sm p-6">
+                        <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome back</h2>
+                        <p className="text-gray-600">{user.email}</p>
+                    </div>
+
+                    {/* Walk-In Quick Action */}
+                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-600 rounded-lg shadow-sm p-6">
+                        <div className="flex items-start justify-between">
+                            <div>
+                                <h3 className="text-lg font-semibold text-green-900 mb-1">Add Walk-In</h3>
+                                <p className="text-sm text-green-700">Quickly create a walk-in appointment. Slot auto-assigned to next available time.</p>
+                            </div>
                         </div>
                     </div>
+
+                    {/* Walk-In Form Section */}
+                    <div id="walk-in-form" className="bg-white rounded-lg shadow-sm p-6 scroll-mt-20">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">New Walk-In Booking</h3>
+                        <WalkInForm
+                            shopId={shopId}
+                            barbers={(barbers as Barber[]) ?? []}
+                            services={(services as Service[]) ?? []}
+                        />
+                    </div>
+
+                    {/* Dashboard Navigation */}
+                    <DashboardContent />
                 </div>
             </main>
         </div>

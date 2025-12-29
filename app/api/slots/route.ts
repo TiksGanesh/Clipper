@@ -54,14 +54,14 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: 'Failed to fetch barber' }, { status: 500 })
     }
 
-    if (!barber || barber.deleted_at || barber.is_active === false) {
+    if (!barber || (barber as any).deleted_at || (barber as any).is_active === false) {
         return NextResponse.json({ error: 'Barber not found' }, { status: 404 })
     }
 
     const { data: workingHours, error: hoursError } = await supabase
         .from('working_hours')
         .select('open_time, close_time, is_closed, day_of_week')
-        .eq('shop_id', barber.shop_id)
+        .eq('shop_id', (barber as any).shop_id)
         .eq('day_of_week', dayRange.start.getUTCDay())
         .maybeSingle()
 
@@ -70,7 +70,7 @@ export async function GET(req: Request) {
     }
 
     // Validate working hours are set
-    if (!workingHours || workingHours.is_closed || !workingHours.open_time || !workingHours.close_time) {
+    if (!workingHours || (workingHours as any).is_closed || !(workingHours as any).open_time || !(workingHours as any).close_time) {
         return NextResponse.json({ error: 'Shop is closed on this day or hours not set' }, { status: 400 })
     }
 
@@ -82,8 +82,8 @@ export async function GET(req: Request) {
         return h * 60 + m
     }
 
-    const localOpenMinutes = parseTimeToMinutes(workingHours.open_time)
-    const localCloseMinutes = parseTimeToMinutes(workingHours.close_time)
+    const localOpenMinutes = parseTimeToMinutes((workingHours as any).open_time)
+    const localCloseMinutes = parseTimeToMinutes((workingHours as any).close_time)
 
     // Convert from local to UTC by adding the timezone offset
     // (offset is negative for timezones ahead of UTC, positive for behind)
@@ -107,10 +107,10 @@ export async function GET(req: Request) {
         if (!services || services.length !== serviceIds.length) {
             return NextResponse.json({ error: 'Some services not found' }, { status: 400 })
         }
-        if (services.some((s) => s.deleted_at || s.is_active === false || s.shop_id !== barber.shop_id)) {
+        if ((services as any[]).some((s) => s.deleted_at || s.is_active === false || s.shop_id !== (barber as any).shop_id)) {
             return NextResponse.json({ error: 'Invalid services for this shop' }, { status: 400 })
         }
-        totalDuration = services.reduce((sum, s) => sum + (s.duration_minutes || 0), 0)
+        totalDuration = (services as any[]).reduce((sum, s) => sum + (s.duration_minutes || 0), 0)
     } else {
         const serviceDuration = Number(serviceDurationParam)
         if (!Number.isFinite(serviceDuration) || serviceDuration <= 0) {
@@ -136,7 +136,7 @@ export async function GET(req: Request) {
         date,
         serviceDurationMinutes: totalDuration,
         workingHours: workingHours ? { 
-            ...workingHours, 
+            ...(workingHours as any), 
             open_time: minutesToTimeString(utcOpenMinutes),
             close_time: minutesToTimeString(utcCloseMinutes)
         } : null,

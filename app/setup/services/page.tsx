@@ -25,12 +25,14 @@ export default async function SetupServicesPage() {
         .is('deleted_at', null)
         .order('created_at', { ascending: true })
 
+    const servicesList = (services ?? []) as any[]
+
     return (
         <div className="max-w-2xl mx-auto py-10">
             <h1 className="text-2xl font-bold mb-6">Step 4: Add Services</h1>
             <form action={saveServicesAction} className="space-y-4">
                 <div id="service-list" className="space-y-4">
-                    {(services?.length ? services : [null]).map((service, idx) => (
+                    {(servicesList.length ? servicesList : [null]).map((service, idx) => (
                         <div key={service?.id ?? `new-${idx}`} className="grid grid-cols-3 gap-3">
                             <input type="hidden" name="service_id" defaultValue={service?.id ?? ''} />
                             <div>

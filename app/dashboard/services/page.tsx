@@ -30,6 +30,8 @@ export default async function DashboardServicesPage() {
         throw new Error(error.message)
     }
 
+    const servicesList = (services ?? []) as any[]
+
     return (
         <div className="max-w-4xl mx-auto py-10 space-y-8">
             <header className="space-y-2">
@@ -58,9 +60,9 @@ export default async function DashboardServicesPage() {
 
             <section className="bg-white shadow-sm rounded-lg p-6 space-y-4">
                 <h2 className="text-lg font-semibold">Existing services</h2>
-                {services && services.length > 0 ? (
+                {servicesList && servicesList.length > 0 ? (
                     <div className="space-y-3">
-                        {services.map((service) => (
+                        {servicesList.map((service) => (
                             <div key={service.id} className="border rounded p-4 space-y-3">
                                 <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
                                     <form action={updateServiceAction} className="contents">

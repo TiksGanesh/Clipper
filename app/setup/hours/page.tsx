@@ -35,7 +35,7 @@ export default async function SetupHoursPage() {
         <div className="max-w-2xl mx-auto py-10">
             <h1 className="text-2xl font-bold mb-6">Step 3: Set Working Hours</h1>
             <p className="text-sm text-gray-600 mb-4">
-                ℹ️ <strong>Note:</strong> All times are stored and displayed in UTC. If your shop operates in a different timezone, please add the offset. For example, if you're in IST (UTC+5:30) and your shop opens at 1:30 PM local time, enter 08:00 UTC (1:30 PM - 5:30 hours).
+                ℹ️ <strong>Note:</strong> All times are stored and displayed in UTC. If your shop operates in a different timezone, please add the offset. For example, if you are in IST (UTC+5:30) and your shop opens at 1:30 PM local time, enter 08:00 UTC (1:30 PM - 5:30 hours).
             </p>
             <form action={saveHoursAction} className="space-y-4">
                 <div className="grid grid-cols-1 gap-4">

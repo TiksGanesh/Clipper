@@ -11,22 +11,25 @@ export default async function PublicBookingPage({ params }: { params: { shopId: 
         .eq('id', params.shopId)
         .maybeSingle()
 
-    if (!shop || shop.deleted_at) {
+    if (!shop || (shop as any).deleted_at) {
         notFound()
     }
+
+    const shopData = shop as any
+    const shopIdValue = shopData.id
 
     const [{ data: barbers }, { data: services }] = await Promise.all([
         supabase
             .from('barbers')
             .select('id, name')
-            .eq('shop_id', shop.id)
+            .eq('shop_id', shopIdValue)
             .eq('is_active', true)
             .is('deleted_at', null)
             .order('name', { ascending: true }),
         supabase
             .from('services')
             .select('id, name, duration_minutes, price')
-            .eq('shop_id', shop.id)
+            .eq('shop_id', shopIdValue)
             .eq('is_active', true)
             .is('deleted_at', null)
             .order('name', { ascending: true }),
@@ -41,9 +44,9 @@ export default async function PublicBookingPage({ params }: { params: { shopId: 
             <div className="max-w-3xl mx-auto px-4 py-10">
                 <div className="mb-8 text-center">
                     <p className="text-sm uppercase tracking-wide text-gray-500">Book with</p>
-                    <h1 className="text-3xl font-bold text-gray-900">{shop.name}</h1>
-                    {shop.address && <p className="text-gray-600 mt-2">{shop.address}</p>}
-                    {shop.phone && <p className="text-gray-500 text-sm">{shop.phone}</p>}
+                    <h1 className="text-3xl font-bold text-gray-900">{shopData.name}</h1>
+                    {shopData.address && <p className="text-gray-600 mt-2">{shopData.address}</p>}
+                    {shopData.phone && <p className="text-gray-500 text-sm">{shopData.phone}</p>}
                 </div>
                 <BookingForm shop={shop} barbers={barbers} services={services} />
             </div>
