@@ -1,8 +1,8 @@
 import { requireAuth } from '@/lib/auth'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
-import WalkInForm from '@/components/booking/WalkInForm'
-import DashboardContent from './dashboard-content'
+import Link from 'next/link'
+import DayView from '@/components/calendar/DayView'
 
 type Barber = {
     id: string
@@ -62,65 +62,74 @@ export default async function DashboardPage() {
     }
 
     // Sign out function will be handled via a server action or API route
+    const today = new Date().toISOString().split('T')[0]
+    const firstBarberId = (barbers as Barber[])?.[0]?.id ?? ''
+
     return (
         <div className="min-h-screen bg-gray-50">
-            <nav className="bg-white shadow">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between h-16">
-                        <div className="flex items-center">
-                            <h1 className="text-xl font-bold text-gray-900">Clipper Dashboard</h1>
+            {/* Header */}
+            <header className="bg-white shadow">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+                            <p className="text-gray-600 mt-1">Welcome back, <span className="font-medium">{user.email}</span></p>
                         </div>
-                            <div className="flex items-center gap-4">
-                                <a
-                                    href="#walk-in-form"
-                                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md transition"
-                                >
-                                    + Book Walk-In
-                                </a>
-                                <span className="text-sm text-gray-600">{user.email}</span>
-                            <form action="/api/auth/signout" method="POST">
-                                <button
-                                    type="submit"
-                                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md"
-                                >
-                                    Sign Out
-                                </button>
-                            </form>
-                        </div>
+                        <form action="/api/auth/signout" method="POST">
+                            <button
+                                type="submit"
+                                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition"
+                            >
+                                Sign Out
+                            </button>
+                        </form>
                     </div>
                 </div>
-            </nav>
+            </header>
 
-            <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-                <div className="px-4 py-6 sm:px-0 space-y-6">
-                    {/* Welcome Section */}
-                    <div className="bg-white rounded-lg shadow-sm p-6">
-                        <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome back</h2>
-                        <p className="text-gray-600">{user.email}</p>
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    {/* Calendar Section */}
+                    <div className="lg:col-span-3">
+                        <div className="bg-white rounded-lg shadow-sm p-6">
+                            <DayView
+                                barbers={(barbers as Barber[]) ?? []}
+                                initialDate={today}
+                                initialBarberId={firstBarberId}
+                                isReadOnly={false}
+                            />
+                        </div>
                     </div>
 
-                    {/* Walk-In Quick Action */}
-                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-600 rounded-lg shadow-sm p-6">
-                        <div className="flex items-start justify-between">
-                            <div>
-                                <h3 className="text-lg font-semibold text-green-900 mb-1">Add Walk-In</h3>
-                                <p className="text-sm text-green-700">Quickly create a walk-in appointment. Slot auto-assigned to next available time.</p>
+                    {/* Sidebar Navigation */}
+                    <div className="lg:col-span-1">
+                        <div className="bg-white rounded-lg shadow-sm p-6 space-y-4">
+                            <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
+
+                            {/* Add Walk-In Button */}
+                            <Link
+                                href="/dashboard/walk-in"
+                                className="flex items-center justify-between w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-md transition font-medium"
+                            >
+                                <span>+ Walk-In Booking</span>
+                            </Link>
+
+                            {/* Manage Services Link */}
+                            <Link
+                                href="/dashboard/services"
+                                className="flex items-center justify-between w-full px-4 py-3 border border-gray-300 hover:bg-gray-50 text-gray-900 rounded-md transition font-medium"
+                            >
+                                <span>Manage Services</span>
+                                <span className="text-gray-400">→</span>
+                            </Link>
+
+                            {/* Help Section */}
+                            <div className="pt-4 border-t border-gray-200 space-y-3">
+                                <h4 className="text-sm font-semibold text-gray-700">Help</h4>
+                                <p className="text-sm text-gray-600">Need help with bookings? Check your calendar view and use the action buttons to manage appointments.</p>
                             </div>
                         </div>
                     </div>
-
-                    {/* Walk-In Form Section */}
-                    <div id="walk-in-form" className="bg-white rounded-lg shadow-sm p-6 scroll-mt-20">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">New Walk-In Booking</h3>
-                        <WalkInForm
-                            shopId={shopId}
-                            barbers={(barbers as Barber[]) ?? []}
-                            services={(services as Service[]) ?? []}
-                        />
-                    </div>
-
-                    {/* Dashboard Navigation */}
-                    <DashboardContent />
                 </div>
             </main>
         </div>
