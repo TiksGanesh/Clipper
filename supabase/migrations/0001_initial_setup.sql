@@ -370,3 +370,41 @@ CREATE POLICY "shop_owners_read_own_subscription" ON subscriptions
     );
 CREATE POLICY "service_role_manage_subscriptions" ON subscriptions
     FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- WORKING HOURS policies
+CREATE POLICY "shop_owners_read_own_hours" ON working_hours
+    FOR SELECT TO authenticated USING (
+        EXISTS (
+            SELECT 1 FROM shops
+            WHERE shops.id = working_hours.shop_id
+              AND shops.owner_id = auth.uid()
+              AND shops.deleted_at IS NULL
+        )
+    );
+
+CREATE POLICY "shop_owners_insert_own_hours" ON working_hours
+    FOR INSERT TO authenticated WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM shops
+            WHERE shops.id = working_hours.shop_id
+              AND shops.owner_id = auth.uid()
+              AND shops.deleted_at IS NULL
+        )
+    );
+
+CREATE POLICY "shop_owners_update_own_hours" ON working_hours
+    FOR UPDATE TO authenticated USING (
+        EXISTS (
+            SELECT 1 FROM shops
+            WHERE shops.id = working_hours.shop_id
+              AND shops.owner_id = auth.uid()
+              AND shops.deleted_at IS NULL
+        )
+    ) WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM shops
+            WHERE shops.id = working_hours.shop_id
+              AND shops.owner_id = auth.uid()
+              AND shops.deleted_at IS NULL
+        )
+    );
