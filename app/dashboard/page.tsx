@@ -88,6 +88,14 @@ export default async function DashboardPage() {
                                     </div>
                                 )}
                             </dl>
+                        <div className="mt-6">
+                            <a
+                                href="/dashboard/services"
+                                className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md"
+                            >
+                                Manage Services
+                            </a>
+                        </div>
                         </div>
                     </div>
                 </div>

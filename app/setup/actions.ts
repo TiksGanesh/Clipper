@@ -187,24 +187,39 @@ export async function saveServicesAction(formData: FormData) {
         redirect('/setup/shop')
     }
 
-    // Collect arrays from form fields: name[], duration[], price[]
-    const names = formData.getAll('service_name').map((v) => (v as string).trim()).filter(Boolean)
+    const ids = formData.getAll('service_id').map((v) => (v as string).trim()).filter(Boolean)
+    const names = formData.getAll('service_name').map((v) => (v as string).trim())
     const durations = formData.getAll('service_duration').map((v) => Number(v))
     const prices = formData.getAll('service_price').map((v) => Number(v))
 
-    if (names.length === 0) {
+    // Build rows while filtering out empty names; keep index alignment via original arrays
+    const rows: Database['public']['Tables']['services']['Insert'][] = []
+    names.forEach((name, idx) => {
+        if (!name) return
+        const row: Database['public']['Tables']['services']['Insert'] = {
+            shop_id: shop.id,
+            name,
+            duration_minutes: Math.max(1, Math.floor(durations[idx] || 0)),
+            price: Math.max(0, prices[idx] || 0),
+            is_active: true,
+        }
+        const existingId = ids[idx]
+        if (existingId) {
+            row.id = existingId
+        }
+        rows.push(row)
+    })
+
+    if (rows.length === 0) {
         throw new Error('Add at least one service')
     }
 
-    const rows: Database['public']['Tables']['services']['Insert'][] = names.map((name, idx) => ({
-        shop_id: shop.id,
-        name,
-        duration_minutes: Math.max(1, Math.floor(durations[idx] || 0)),
-        price: Math.max(0, prices[idx] || 0),
-        is_active: true,
-    }))
+    // Upsert to avoid duplicate rows when setup is revisited
+    const { error } = await supabase
+        .from('services')
+        // @ts-expect-error - Supabase type inference issue
+        .upsert(rows, { onConflict: 'id' })
 
-    const { error } = await supabase.from('services').insert(rows as any)
     if (error) {
         throw new Error(error.message)
     }

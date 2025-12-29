@@ -97,3 +97,27 @@ export function createAnonClient() {
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     )
 }
+
+/**
+ * Create a Supabase client using the service role key for server-only use.
+ * Bypasses RLS; never expose to the client.
+ */
+export function createServiceSupabaseClient() {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+    if (!serviceRoleKey) {
+        throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set')
+    }
+
+    return createServerClient<Database>(url, serviceRoleKey, {
+        cookies: {
+            getAll() {
+                return []
+            },
+            setAll() {
+                // No-op: service client should not set cookies
+            },
+        },
+    })
+}
