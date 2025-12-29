@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { validateEnv } from '@/lib/env'
+import './globals.css'
 
 export const metadata: Metadata = {
     title: 'Clipper - Barber Appointment Scheduling',

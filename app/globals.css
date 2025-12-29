@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+/* Utility to hide scrollbars on horizontal chip scrollers (mobile polish) */
+.no-scrollbar {
+	-ms-overflow-style: none; /* IE and Edge */
+	scrollbar-width: none; /* Firefox */
+}
+.no-scrollbar::-webkit-scrollbar {
+	display: none; /* Chrome, Safari */
+}

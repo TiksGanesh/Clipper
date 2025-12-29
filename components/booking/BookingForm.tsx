@@ -34,8 +34,9 @@ type Props = {
 }
 
 export default function BookingForm({ shop, barbers, services }: Props) {
+    const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1)
     const [barberId, setBarberId] = useState(barbers[0]?.id ?? '')
-    const [serviceIds, setServiceIds] = useState<string[]>(services[0]?.id ? [services[0].id] : [])
+    const [serviceIds, setServiceIds] = useState<string[]>([])
     const [date, setDate] = useState('')
     const [slots, setSlots] = useState<Slot[]>([])
     const [selectedSlot, setSelectedSlot] = useState<string>('')
@@ -49,18 +50,9 @@ export default function BookingForm({ shop, barbers, services }: Props) {
     // Get browser timezone offset in minutes (negative for ahead of UTC)
     const timezoneOffset = useMemo(() => new Date().getTimezoneOffset(), [])
 
-    const totalDuration = useMemo(() =>
-        services.filter((s) => serviceIds.includes(s.id)).reduce((sum, s) => sum + (s.duration_minutes || 0), 0),
-        [services, serviceIds]
-    )
-
-
-    const selectedServiceNames = useMemo(() => {
-        return services
-            .filter((s) => serviceIds.includes(s.id))
-            .map((s) => s.name)
-            .join(' + ')
-    }, [services, serviceIds])
+    const selectedServices = useMemo(() => services.filter((s) => serviceIds.includes(s.id)), [services, serviceIds])
+    const totalDuration = useMemo(() => selectedServices.reduce((sum, s) => sum + (s.duration_minutes || 0), 0), [selectedServices])
+    const selectedServiceName = useMemo(() => selectedServices.map((s) => s.name).join(' + '), [selectedServices])
 
     const maxDateStr = useMemo(() => {
         const today = new Date()
@@ -185,119 +177,197 @@ export default function BookingForm({ shop, barbers, services }: Props) {
     }
 
     return (
-        <form onSubmit={handleSubmit} className="bg-white shadow-sm rounded-lg p-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <label className="space-y-2">
-                    <span className="text-sm font-medium text-gray-700">Barber</span>
-                    <select
-                        className="w-full border rounded px-3 py-2"
-                        value={barberId}
-                        onChange={(e) => setBarberId(e.target.value)}
-                    >
-                        {barbers.map((b) => (
-                            <option key={b.id} value={b.id}>
-                                {b.name}
-                            </option>
-                        ))}
-                    </select>
-                </label>
-                <label className="space-y-2">
-                    <span className="text-sm font-medium text-gray-700">Services</span>
-                    <select
-                        className="w-full border rounded px-3 py-2"
-                        multiple
-                        value={serviceIds}
-                        onChange={(e) => {
-                            const opts = Array.from(e.currentTarget.selectedOptions).map((o) => o.value)
-                            setServiceIds(opts)
-                        }}
-                    >
-                        {services.map((s) => (
-                            <option key={s.id} value={s.id}>
-                                {s.name} ({s.duration_minutes} mins)
-                            </option>
-                        ))}
-                    </select>
-                    <p className="text-xs text-gray-500">Hold Ctrl/Cmd to select multiple</p>
-                </label>
-                <label className="space-y-2">
-                    <span className="text-sm font-medium text-gray-700">Date</span>
-                    <input
-                        type="date"
-                        className="w-full border rounded px-3 py-2"
-                        value={date}
-                        onChange={(e) => setDate(e.target.value)}
-                        min={new Date().toISOString().slice(0, 10)}
-                        max={maxDateStr}
-                    />
-                </label>
-                <div className="space-y-2">
-                    <span className="text-sm font-medium text-gray-700">Available Slots</span>
-                    <div className="flex flex-wrap gap-2">
-                        {slotsLoading && <span className="text-sm text-gray-500">Loading...</span>}
-                        {!slotsLoading && slots.length === 0 && date && <span className="text-sm text-gray-500">No slots</span>}
-                        {!slotsLoading && slots.map((slot) => (
+        <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-6">
+            {/* Step Header */}
+            <ol className="flex items-center gap-2 text-sm text-gray-600" aria-label="Steps">
+                <li className={step >= 1 ? 'text-indigo-600 font-medium' : ''}>1. Barber</li>
+                <span className="text-gray-300">/</span>
+                <li className={step >= 2 ? 'text-indigo-600 font-medium' : ''}>2. Service</li>
+                <span className="text-gray-300">/</span>
+                <li className={step >= 3 ? 'text-indigo-600 font-medium' : ''}>3. Time</li>
+                <span className="text-gray-300">/</span>
+                <li className={step >= 4 ? 'text-indigo-600 font-medium' : ''}>4. Details</li>
+                <span className="text-gray-300">/</span>
+                <li className={step >= 5 ? 'text-indigo-600 font-medium' : ''}>5. Payment</li>
+            </ol>
+
+            {/* Step 1: Select Barber */}
+            <section aria-labelledby="step-barber">
+                <h2 id="step-barber" className="text-lg font-medium text-gray-900 mb-3">Select Barber</h2>
+                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                    {barbers.slice(0, 2).map((b) => {
+                        const selected = barberId === b.id
+                        return (
                             <button
-                                key={slot.start}
+                                key={b.id}
                                 type="button"
-                                className={`px-3 py-2 rounded border text-sm ${
-                                    selectedSlot === slot.start ? 'bg-blue-600 text-white' : 'bg-white text-gray-800'
+                                onClick={() => {
+                                    setBarberId(b.id)
+                                    setStep(2)
+                                }}
+                                aria-pressed={selected}
+                                className={`whitespace-nowrap px-4 py-2 rounded-full border text-sm transition-colors ${
+                                    selected
+                                        ? 'bg-indigo-600 text-white border-indigo-600'
+                                        : 'bg-white text-gray-800 border-gray-300 hover:border-gray-400'
                                 }`}
-                                onClick={() => setSelectedSlot(slot.start)}
                             >
-                                {formatSlot(slot.start)}
+                                {b.name}
                             </button>
-                        ))}
+                        )
+                    })}
+                </div>
+            </section>
+
+            {/* Step 2: Select Service(s) */}
+            <section aria-labelledby="step-service">
+                <h2 id="step-service" className="text-lg font-medium text-gray-900 mb-3">Select Service</h2>
+                <div className="grid grid-cols-1 gap-3">
+                    {services.map((s) => {
+                        const selected = serviceIds.includes(s.id)
+                        return (
+                            <button
+                                key={s.id}
+                                type="button"
+                                onClick={() => {
+                                    setServiceIds((prev) => {
+                                        const exists = prev.includes(s.id)
+                                        const next = exists ? prev.filter((id) => id !== s.id) : [...prev, s.id]
+                                        if (next.length > 0 && step < 3) setStep(3)
+                                        return next
+                                    })
+                                }}
+                                aria-pressed={selected}
+                                className={`w-full text-left rounded-lg border p-4 transition-colors ${
+                                    selected
+                                        ? 'border-indigo-600 ring-2 ring-indigo-500'
+                                        : 'border-gray-300 hover:border-gray-400'
+                                }`}
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="font-medium text-gray-900">{s.name}</p>
+                                        <p className="text-sm text-gray-600">{s.duration_minutes} min{s.duration_minutes !== 1 ? 's' : ''}</p>
+                                    </div>
+                                    {typeof s.price === 'number' && (
+                                        <p className="text-sm font-medium text-gray-900">₹{s.price}</p>
+                                    )}
+                                </div>
+                            </button>
+                        )
+                    })}
+                </div>
+            </section>
+
+            {/* Step 3: Select Date & Time */}
+            <section aria-labelledby="step-time">
+                <h2 id="step-time" className="text-lg font-medium text-gray-900 mb-3">Select Date & Time</h2>
+                <div className="grid grid-cols-1 gap-4">
+                    <label className="block">
+                        <span className="block text-sm font-medium text-gray-700 mb-1">Date</span>
+                        <input
+                            type="date"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            value={date}
+                            onChange={(e) => setDate(e.target.value)}
+                            min={new Date().toISOString().slice(0, 10)}
+                            max={maxDateStr}
+                        />
+                    </label>
+
+                    <div>
+                        <span className="block text-sm font-medium text-gray-700 mb-2">Available time slots</span>
+                        <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
+                            {slotsLoading && <span className="text-sm text-gray-500">Loading…</span>}
+                            {!slotsLoading && date && slots.length === 0 && (
+                                <span className="text-sm text-gray-500">No slots</span>
+                            )}
+                            {!slotsLoading && slots.map((slot) => {
+                                const sel = selectedSlot === slot.start
+                                return (
+                                    <button
+                                        key={slot.start}
+                                        type="button"
+                                        onClick={() => {
+                                            setSelectedSlot(slot.start)
+                                            setStep(4)
+                                        }}
+                                        className={`px-3 py-2 rounded-lg border text-sm transition-colors ${
+                                            sel
+                                                ? 'bg-indigo-600 text-white border-indigo-600'
+                                                : 'bg-white text-gray-900 border-gray-300 hover:border-gray-400'
+                                        }`}
+                                    >
+                                        {formatSlot(slot.start)}
+                                    </button>
+                                )
+                            })}
+                        </div>
                     </div>
                 </div>
-            </div>
+            </section>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <label className="space-y-2">
-                    <span className="text-sm font-medium text-gray-700">Your Name</span>
-                    <input
-                        type="text"
-                        className="w-full border rounded px-3 py-2"
-                        value={customerName}
-                        onChange={(e) => setCustomerName(e.target.value)}
-                        placeholder="Alex Doe"
-                    />
-                </label>
-                <label className="space-y-2">
-                    <span className="text-sm font-medium text-gray-700">Phone</span>
-                    <input
-                        type="tel"
-                        className="w-full border rounded px-3 py-2"
-                        value={customerPhone}
-                        onChange={(e) => setCustomerPhone(e.target.value)}
-                        placeholder="(555) 123-4567"
-                    />
-                </label>
-            </div>
+            {/* Step 4: Customer Details */}
+            <section aria-labelledby="step-details">
+                <h2 id="step-details" className="text-lg font-medium text-gray-900 mb-3">Your Details</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <label className="block">
+                        <span className="block text-sm font-medium text-gray-700 mb-1">Name</span>
+                        <input
+                            type="text"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            value={customerName}
+                            onChange={(e) => setCustomerName(e.target.value)}
+                            placeholder="Your name"
+                        />
+                    </label>
+                    <label className="block">
+                        <span className="block text-sm font-medium text-gray-700 mb-1">Phone number</span>
+                        <input
+                            type="tel"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            value={customerPhone}
+                            onChange={(e) => setCustomerPhone(e.target.value)}
+                            placeholder="Your phone"
+                        />
+                    </label>
+                </div>
+            </section>
+
+            {/* Step 5: Payment */}
+            <section aria-labelledby="step-payment">
+                <h2 id="step-payment" className="text-lg font-medium text-gray-900 mb-3">Payment</h2>
+                <div className="space-y-3">
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <span className="text-sm text-gray-600">Selected service</span>
+                        <span className="text-sm font-medium text-gray-900">{selectedServiceName || '—'}</span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <span className="text-sm text-gray-600">Estimated time</span>
+                        <span className="text-sm font-medium text-gray-900">{totalDuration} mins</span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-indigo-50 rounded-lg border border-indigo-200">
+                        <span className="text-sm text-gray-700">Advance payment required</span>
+                        <span className="text-sm font-medium text-indigo-700">₹0</span>
+                    </div>
+                    <p className="text-xs text-gray-600">This amount will be adjusted in your final bill.</p>
+                </div>
+            </section>
 
             {error && <p className="text-sm text-red-600">{error}</p>}
-            {success && <p className="text-sm text-green-600">{success}</p>}
+            {success && <p className="text-sm text-emerald-600">{success}</p>}
 
-            <div className="space-y-4">
-                <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                    <span className="text-sm text-gray-600">Estimated time:</span>
-                    <span className="font-medium">{totalDuration} mins</span>
+            {/* Mobile sticky CTA */}
+            <div className="md:static fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
+                <div className="max-w-2xl mx-auto p-4">
+                    <button
+                        type="submit"
+                        disabled={submitting || !barberId || serviceIds.length === 0 || !selectedSlot || !customerName || !customerPhone}
+                        className="w-full py-3 px-4 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {submitting ? 'Booking…' : 'Confirm Booking'}
+                    </button>
                 </div>
-                <div className="flex justify-between items-center p-3 bg-blue-50 rounded border border-blue-200">
-                    <span className="text-sm text-gray-700">Advance payment required:</span>
-                    <span className="font-medium text-blue-600">₹0</span>
-                </div>
-            </div>
-
-            <div className="flex justify-between items-center">
-                <div className="text-sm text-gray-600"></div>
-                <button
-                    type="submit"
-                    disabled={submitting || !selectedSlot || serviceIds.length === 0}
-                    className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-60"
-                >
-                    {submitting ? 'Confirming…' : 'Confirm Booking'}
-                </button>
             </div>
         </form>
     )

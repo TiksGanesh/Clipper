@@ -40,30 +40,32 @@ export default function LoginPage() {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-            <div className="max-w-md w-full space-y-8">
-                <div>
-                    <h2 className="text-center text-3xl font-bold text-gray-900">
-                        Sign in to your account
-                    </h2>
-                    <p className="mt-2 text-center text-sm text-gray-600">
-                        Or{' '}
-                        <Link href="/signup" className="font-medium text-blue-600 hover:text-blue-500">
-                            create a new account
-                        </Link>
-                    </p>
-                </div>
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8 overflow-x-hidden">
+            <div className="w-full max-w-sm">
+                {/* Card */}
+                <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-6">
+                    {/* Header */}
+                    <div className="space-y-2 text-center">
+                        <h1 className="text-xl font-semibold text-gray-900">
+                            Sign in to your account
+                        </h1>
+                        <p className="text-sm text-gray-600">
+                            Manage your barber shop bookings
+                        </p>
+                    </div>
 
-                <form className="mt-8 space-y-6" onSubmit={handleLogin}>
+                    {/* Error Message */}
                     {error && (
-                        <div className="rounded-md bg-red-50 p-4">
-                            <p className="text-sm text-red-800">{error}</p>
+                        <div className="rounded-lg bg-red-50 border border-red-200 p-4">
+                            <p className="text-sm text-red-700 break-words">{error}</p>
                         </div>
                     )}
 
-                    <div className="space-y-4">
+                    {/* Form */}
+                    <form className="space-y-4" onSubmit={handleLogin}>
+                        {/* Email Field */}
                         <div>
-                            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                                 Email address
                             </label>
                             <input
@@ -74,13 +76,14 @@ export default function LoginPage() {
                                 required
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                 placeholder="you@example.com"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                             />
                         </div>
 
+                        {/* Password Field */}
                         <div>
-                            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                                 Password
                             </label>
                             <input
@@ -91,20 +94,34 @@ export default function LoginPage() {
                                 required
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                 placeholder="••••••••"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                             />
                         </div>
-                    </div>
 
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {loading ? 'Signing in...' : 'Sign in'}
-                    </button>
-                </form>
+                        {/* Submit Button */}
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full py-3 px-4 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            {loading ? 'Signing in...' : 'Sign in'}
+                        </button>
+                    </form>
+
+                    {/* Signup Link */}
+                    <div className="text-center">
+                        <p className="text-sm text-gray-600">
+                            Don't have an account?{' '}
+                            <Link
+                                href="/signup"
+                                className="font-medium text-indigo-600 hover:text-indigo-700 focus:outline-none focus:underline"
+                            >
+                                Create new account
+                            </Link>
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
     )

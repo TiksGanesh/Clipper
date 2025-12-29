@@ -18,15 +18,20 @@ export const razorpayWebhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET!
 /**
  * Validate required environment variables on startup
  * Call this in your root layout or API initialization
+ * 
+ * NOTE: Razorpay env vars are optional while payment flow is disabled.
+ * Enable them when integrating payments.
  */
 export function validateEnv() {
     const required = [
         { key: 'NEXT_PUBLIC_SUPABASE_URL', value: supabaseUrl },
         { key: 'NEXT_PUBLIC_SUPABASE_ANON_KEY', value: supabaseAnonKey },
-        { key: 'NEXT_PUBLIC_RAZORPAY_KEY_ID', value: razorpayKeyIdPublic },
-        { key: 'RAZORPAY_KEY_ID', value: razorpayKeyId },
-        { key: 'RAZORPAY_SECRET', value: razorpaySecret },
-        { key: 'RAZORPAY_WEBHOOK_SECRET', value: razorpayWebhookSecret },
+        // Razorpay env vars are optional for now (payment flow disabled)
+        // Uncomment when enabling payment integration:
+        // { key: 'NEXT_PUBLIC_RAZORPAY_KEY_ID', value: razorpayKeyIdPublic },
+        // { key: 'RAZORPAY_KEY_ID', value: razorpayKeyId },
+        // { key: 'RAZORPAY_SECRET', value: razorpaySecret },
+        // { key: 'RAZORPAY_WEBHOOK_SECRET', value: razorpayWebhookSecret },
     ]
 
     const missing = required.filter(({ value }) => !value)

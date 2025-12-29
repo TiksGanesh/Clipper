@@ -63,14 +63,12 @@ export default async function PublicBookingPage({ params }: { params: { shopId: 
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            <div className="max-w-3xl mx-auto px-4 py-10">
-                <div className="mb-8 text-center">
-                    <p className="text-sm uppercase tracking-wide text-gray-500">Book with</p>
-                    <h1 className="text-3xl font-bold text-gray-900">{shopData.name}</h1>
-                    {shopData.address && <p className="text-gray-600 mt-2">{shopData.address}</p>}
-                    {shopData.phone && <p className="text-gray-500 text-sm">{shopData.phone}</p>}
-                </div>
+        <div className="min-h-screen bg-gray-50 overflow-x-hidden">
+            <div className="max-w-2xl mx-auto px-4 py-10 pb-24">
+                <header className="mb-6 text-center">
+                    <h1 className="text-xl font-semibold text-gray-900">{shopData.name}</h1>
+                    <p className="text-sm text-gray-600 mt-1">Book your appointment in seconds</p>
+                </header>
                 <BookingForm shop={shop} barbers={barbers} services={services} />
             </div>
         </div>
