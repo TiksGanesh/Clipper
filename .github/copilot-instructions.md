@@ -91,6 +91,16 @@ Do not suggest alternative frameworks or databases.
 - Subscription state controls app access
 - Trial expiry must lock booking actions
 
+You are integrating Razorpay ONLY for customer booking payments.
+
+Important constraints:
+- Razorpay is NOT used for vendor subscription billing
+- Payments are optional advance payments per service
+- One-time payments only (no subscriptions, no autopay)
+- Payment is tied to a single booking
+- If payment succeeds → booking is confirmed
+- If payment fails → booking is NOT created
+
 ---
 
 ## Security

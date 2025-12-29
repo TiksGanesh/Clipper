@@ -89,6 +89,8 @@ CREATE TABLE IF NOT EXISTS services (
     name VARCHAR(255) NOT NULL,
     duration_minutes INTEGER NOT NULL CHECK (duration_minutes > 0 AND duration_minutes <= 480),
     price NUMERIC(10,2) NOT NULL CHECK (price >= 0),
+    advance_amount INTEGER NOT NULL DEFAULT 0 CHECK (advance_amount >= 0),
+    requires_advance BOOLEAN NOT NULL DEFAULT false,
     is_active BOOLEAN NOT NULL DEFAULT true,
     deleted_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -759,5 +761,47 @@ BEGIN
     SELECT v_booking_id, sid FROM UNNEST(p_service_ids) AS sid;
 
     RETURN v_booking_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================================================
+-- PAYMENTS TABLE (for Razorpay integration)
+-- ============================================================================
+
+-- Create payment status enum
+CREATE TYPE payment_status AS ENUM ('created', 'paid', 'failed');
+
+-- Create payments table
+CREATE TABLE IF NOT EXISTS payments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    booking_id UUID REFERENCES bookings(id) ON DELETE RESTRICT,
+    razorpay_order_id VARCHAR(255) NOT NULL UNIQUE,
+    razorpay_payment_id VARCHAR(255),
+    amount INTEGER NOT NULL,
+    status payment_status NOT NULL DEFAULT 'created',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Add comment for amount column (Postgres way)
+COMMENT ON COLUMN payments.amount IS 'Amount in smallest currency unit (paise for INR)';
+
+-- Indexes for efficient lookups
+CREATE INDEX idx_payments_booking_id ON payments(booking_id);
+CREATE INDEX idx_payments_razorpay_order_id ON payments(razorpay_order_id);
+CREATE INDEX idx_payments_razorpay_payment_id ON payments(razorpay_payment_id);
+CREATE INDEX idx_payments_status ON payments(status);
+
+-- Auto-update timestamp trigger
+CREATE TRIGGER update_payments_updated_at
+BEFORE UPDATE ON payments
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;

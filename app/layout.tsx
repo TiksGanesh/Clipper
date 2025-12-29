@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { validateEnv } from '@/lib/env'
 
 export const metadata: Metadata = {
     title: 'Clipper - Barber Appointment Scheduling',
@@ -10,6 +11,16 @@ export default function RootLayout({
 }: {
     children: React.ReactNode
 }) {
+    // Fail fast in dev if required env vars are missing
+    // Safe on server; does not expose secrets to client
+    if (process.env.NODE_ENV !== 'production') {
+        try {
+            validateEnv()
+        } catch (err) {
+            // Log a clear error to server console to aid setup
+            console.error(err)
+        }
+    }
     return (
         <html lang="en">
             <body>{children}</body>

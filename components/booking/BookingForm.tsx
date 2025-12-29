@@ -19,6 +19,7 @@ type Service = {
     name: string
     duration_minutes: number
     price: number
+    advance_amount?: number
 }
 
 type Slot = {
@@ -52,11 +53,21 @@ export default function BookingForm({ shop, barbers, services }: Props) {
         services.filter((s) => serviceIds.includes(s.id)).reduce((sum, s) => sum + (s.duration_minutes || 0), 0),
         [services, serviceIds]
     )
+
+
+    const selectedServiceNames = useMemo(() => {
+        return services
+            .filter((s) => serviceIds.includes(s.id))
+            .map((s) => s.name)
+            .join(' + ')
+    }, [services, serviceIds])
+
     const maxDateStr = useMemo(() => {
         const today = new Date()
         const plus1 = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1)
         return plus1.toISOString().slice(0, 10)
     }, [])
+
 
     useEffect(() => {
         setSelectedSlot('')
@@ -98,41 +109,72 @@ export default function BookingForm({ shop, barbers, services }: Props) {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!barberId || serviceIds.length === 0 || !selectedSlot || !customerName || !customerPhone || !date) {
-            setError('Please complete all fields')
+        
+        // Detailed validation with clear error messages
+        if (!barberId) {
+            setError('Please select a barber')
             return
         }
+        if (serviceIds.length === 0) {
+            setError('Please select at least one service')
+            return
+        }
+        if (!date) {
+            setError('Please select a date')
+            return
+        }
+        if (!selectedSlot) {
+            setError('Please select a time slot')
+            return
+        }
+        if (!customerName.trim()) {
+            setError('Please enter your name')
+            return
+        }
+        if (!customerPhone.trim()) {
+            setError('Please enter your phone number')
+            return
+        }
+
         setSubmitting(true)
         setError('')
         setSuccess('')
+
         try {
-            const res = await fetch('/api/bookings', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    barber_id: barberId,
-                    service_ids: serviceIds,
-                    slot_start: selectedSlot,
-                    customer_name: customerName.trim(),
-                    customer_phone: customerPhone.trim(),
-                    date,
-                    timezone_offset: timezoneOffset,
-                }),
-            })
-            const body = await res.json().catch(() => ({}))
-            if (!res.ok) {
-                throw new Error(body.error || 'Booking failed')
-            }
-            setSuccess('Booking confirmed!')
-            setSlots([])
-            setSelectedSlot('')
-            setCustomerName('')
-            setCustomerPhone('')
+            console.log('Booking submission - no advance payment; creating booking')
+            await createBookingWithoutPayment()
         } catch (err: any) {
+            console.error('Booking error:', err)
             setError(err.message)
         } finally {
             setSubmitting(false)
         }
+    }
+
+
+    const createBookingWithoutPayment = async () => {
+        const res = await fetch('/api/bookings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                barber_id: barberId,
+                service_ids: serviceIds,
+                slot_start: selectedSlot,
+                customer_name: customerName.trim(),
+                customer_phone: customerPhone.trim(),
+                date,
+                timezone_offset: timezoneOffset,
+            }),
+        })
+        const body = await res.json().catch(() => ({}))
+        if (!res.ok) {
+            throw new Error(body.error || 'Booking failed')
+        }
+        setSuccess('Booking confirmed!')
+        setSlots([])
+        setSelectedSlot('')
+        setCustomerName('')
+        setCustomerPhone('')
     }
 
     const formatSlot = (iso: string) => {
@@ -236,14 +278,25 @@ export default function BookingForm({ shop, barbers, services }: Props) {
             {error && <p className="text-sm text-red-600">{error}</p>}
             {success && <p className="text-sm text-green-600">{success}</p>}
 
+            <div className="space-y-4">
+                <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                    <span className="text-sm text-gray-600">Estimated time:</span>
+                    <span className="font-medium">{totalDuration} mins</span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-blue-50 rounded border border-blue-200">
+                    <span className="text-sm text-gray-700">Advance payment required:</span>
+                    <span className="font-medium text-blue-600">₹0</span>
+                </div>
+            </div>
+
             <div className="flex justify-between items-center">
-                <div className="text-sm text-gray-600">Estimated time: {totalDuration} mins</div>
+                <div className="text-sm text-gray-600"></div>
                 <button
                     type="submit"
                     disabled={submitting || !selectedSlot || serviceIds.length === 0}
                     className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-60"
                 >
-                    {submitting ? 'Booking...' : 'Confirm Booking'}
+                    {submitting ? 'Confirming…' : 'Confirm Booking'}
                 </button>
             </div>
         </form>

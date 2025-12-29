@@ -8,6 +8,7 @@
 // Client-side accessible (public)
 export const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 export const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+export const razorpayKeyIdPublic = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!
 
 // Server-side only (private) - accessed in API routes and server components
 export const razorpayKeyId = process.env.RAZORPAY_KEY_ID!
@@ -22,6 +23,7 @@ export function validateEnv() {
     const required = [
         { key: 'NEXT_PUBLIC_SUPABASE_URL', value: supabaseUrl },
         { key: 'NEXT_PUBLIC_SUPABASE_ANON_KEY', value: supabaseAnonKey },
+        { key: 'NEXT_PUBLIC_RAZORPAY_KEY_ID', value: razorpayKeyIdPublic },
         { key: 'RAZORPAY_KEY_ID', value: razorpayKeyId },
         { key: 'RAZORPAY_SECRET', value: razorpaySecret },
         { key: 'RAZORPAY_WEBHOOK_SECRET', value: razorpayWebhookSecret },

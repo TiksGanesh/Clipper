@@ -134,6 +134,8 @@ export type Database = {
                     name: string
                     duration_minutes: number
                     price: number
+                    advance_amount: number
+                    requires_advance: boolean
                     is_active: boolean
                     deleted_at: string | null
                     created_at: string
@@ -145,6 +147,8 @@ export type Database = {
                     name: string
                     duration_minutes: number
                     price: number
+                    advance_amount?: number
+                    requires_advance?: boolean
                     is_active?: boolean
                     deleted_at?: string | null
                     created_at?: string
@@ -156,6 +160,8 @@ export type Database = {
                     name?: string
                     duration_minutes?: number
                     price?: number
+                    advance_amount?: number
+                    requires_advance?: boolean
                     is_active?: boolean
                     deleted_at?: string | null
                     created_at?: string
@@ -292,6 +298,47 @@ export type Database = {
                     }
                 ]
             }
+            payments: {
+                Row: {
+                    id: string
+                    booking_id: string | null
+                    razorpay_order_id: string
+                    razorpay_payment_id: string | null
+                    amount: number
+                    status: 'created' | 'paid' | 'failed'
+                    created_at: string
+                    updated_at: string
+                }
+                Insert: {
+                    id?: string
+                    booking_id?: string | null
+                    razorpay_order_id: string
+                    razorpay_payment_id?: string | null
+                    amount: number
+                    status?: 'created' | 'paid' | 'failed'
+                    created_at?: string
+                    updated_at?: string
+                }
+                Update: {
+                    id?: string
+                    booking_id?: string | null
+                    razorpay_order_id?: string
+                    razorpay_payment_id?: string | null
+                    amount?: number
+                    status?: 'created' | 'paid' | 'failed'
+                    created_at?: string
+                    updated_at?: string
+                }
+                Relationships: [
+                    {
+                        foreignKeyName: 'payments_booking_id_fkey'
+                        columns: ['booking_id']
+                        isOneToOne: false
+                        referencedRelation: 'bookings'
+                        referencedColumns: ['id']
+                    }
+                ]
+            }
         }
         Views: {
             active_shops: {
@@ -350,6 +397,7 @@ export type Database = {
         Enums: {
             subscription_status: 'trial' | 'active' | 'past_due' | 'canceled' | 'expired'
             booking_status: 'confirmed' | 'completed' | 'canceled' | 'no_show'
+            payment_status: 'created' | 'paid' | 'failed'
         }
     }
 }
