@@ -58,16 +58,22 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL('/dashboard', request.url))
     }
 
-    // Admin routes protection (future)
-    if (pathname.startsWith('/admin')) {
+    // Admin routes protection: enforce server-side admin membership
+    // Exception: /admin/login and /admin/setup-user are public (for initial access)
+    if (pathname.startsWith('/admin') && pathname !== '/admin/login' && pathname !== '/admin/setup-user') {
         if (!user) {
-            return NextResponse.redirect(new URL('/login', request.url))
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: response.headers })
         }
 
-        // Check admin role from user metadata
-        const isAdmin = user.user_metadata?.role === 'admin'
+        const { data: adminMembership, error: adminCheckError } = await supabase
+            .from('admin_users')
+            .select('user_id')
+            .eq('user_id', user.id)
+            .maybeSingle()
+
+        const isAdmin = !!adminMembership && !adminCheckError
         if (!isAdmin) {
-            return NextResponse.redirect(new URL('/dashboard', request.url))
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403, headers: response.headers })
         }
     }
 

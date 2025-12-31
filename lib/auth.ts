@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabase'
+import { NextResponse } from 'next/server'
 import { redirect } from 'next/navigation'
 
 /**
@@ -40,15 +41,20 @@ export async function requireAuth() {
  * Admins have elevated permissions in the system
  */
 export async function isAdmin() {
-    const user = await getUser()
+    const supabase = await createServerSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
         return false
     }
 
-    // Check user metadata or a dedicated admins table
-    // For now, checking if user has admin role in metadata
-    return user.user_metadata?.role === 'admin'
+    const { data: adminMembership, error: adminCheckError } = await supabase
+        .from('admin_users')
+        .select('user_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+    return !!adminMembership && !adminCheckError
 }
 
 /**
@@ -56,11 +62,70 @@ export async function isAdmin() {
  */
 export async function requireAdmin() {
     const user = await requireAuth()
-    const admin = await isAdmin()
+    const supabase = await createServerSupabaseClient()
+    const { data: adminMembership } = await supabase
+        .from('admin_users')
+        .select('user_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
 
-    if (!admin) {
+    if (!adminMembership) {
         redirect('/dashboard')
     }
 
     return user
+}
+
+export type AdminContext = {
+    userId: string
+    email: string | null
+}
+
+export class AdminAuthError extends Error {
+    status: number
+    constructor(message: string, status: number) {
+        super(message)
+        this.status = status
+    }
+}
+
+// Server-side admin session validation without redirects or cookie handling
+export async function requireAdminContext(): Promise<AdminContext> {
+    const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+
+    if (userError || !user) {
+        throw new AdminAuthError('Unauthorized', 401)
+    }
+
+    const { data: adminMembership, error: adminCheckError } = await supabase
+        .from('admin_users')
+        .select('user_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+    if (adminCheckError) {
+        throw new AdminAuthError('Unable to verify admin access', 500)
+    }
+
+    if (!adminMembership) {
+        throw new AdminAuthError('Forbidden', 403)
+    }
+
+    return {
+        userId: user.id,
+        email: user.email ?? null,
+    }
+}
+
+// Helper for route handlers: returns AdminContext or NextResponse with appropriate status
+export async function assertAdminSession(): Promise<AdminContext | NextResponse> {
+    try {
+        return await requireAdminContext()
+    } catch (error) {
+        if (error instanceof AdminAuthError) {
+            return NextResponse.json({ error: error.message }, { status: error.status })
+        }
+        throw error
+    }
 }
