@@ -70,7 +70,10 @@ export function computeAvailableSlots(params: {
         return []
     }
     
-    for (let minute = openMinutes; minute + duration <= closeMinutes; minute += duration) {
+    // Use 15-minute intervals for slot generation regardless of service duration
+    const slotInterval = 15
+    
+    for (let minute = openMinutes; minute + duration <= closeMinutes; minute += slotInterval) {
         const candidateStart = addMinutes(dayStart, minute)
         const candidateEnd = addMinutes(dayStart, minute + duration)
         

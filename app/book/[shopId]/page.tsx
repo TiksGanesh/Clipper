@@ -23,12 +23,14 @@ export default async function PublicBookingPage({ params }: { params: { shopId: 
             .from('barbers')
             .select('id, name')
             .eq('shop_id', shopIdValue)
+            .eq('is_active', true)
             .is('deleted_at', null)
             .order('name', { ascending: true }),
         supabase
             .from('services')
             .select('id, name, duration_minutes, price')
             .eq('shop_id', shopIdValue)
+            .eq('is_active', true)
             .is('deleted_at', null)
             .order('name', { ascending: true }),
     ])

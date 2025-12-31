@@ -185,78 +185,63 @@ export default function WeekView({ selectedBarberId, selectedDate, isActionPendi
     })
 
     return (
-        <section
-            aria-label="Week view"
-            style={{
-                border: '1px solid #ddd',
-                borderRadius: '8px',
-                padding: '16px',
-                backgroundColor: '#fff',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px',
-            }}
-        >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                <div style={{ fontWeight: 600 }}>Week View</div>
-                <div style={{ fontSize: '12px', color: '#555' }}>
-                    {payload?.weekStart} to {payload?.weekEnd}
-                </div>
+        <section className="space-y-3 pb-20 md:pb-4">
+            <div className="flex justify-between items-center">
+                <h3 className="text-base font-semibold text-gray-900">Week View</h3>
+                {payload && (
+                    <p className="text-xs text-gray-600">
+                        {payload.weekStart} - {payload.weekEnd}
+                    </p>
+                )}
             </div>
 
-            {error && <div style={{ color: '#b00020', fontSize: '14px' }}>{error}</div>}
-            {loading && <div style={{ fontSize: '14px' }}>Loading week view...</div>}
+            {error && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-sm text-red-800">
+                    {error}
+                </div>
+            )}
+            
+            {loading && (
+                <div className="bg-white border border-gray-200 rounded-xl p-4 text-center text-gray-600 text-sm">
+                    Loading week...
+                </div>
+            )}
 
             {!loading && payload && (
-                <div
-                    style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(7, 1fr)',
-                        gap: '8px',
-                    }}
-                >
-                    {weekDates.map((date, index) => {
+                <div className="space-y-3">
+                    {weekDates.map((date) => {
                         const dayLabel = getDayOfWeekLabel(date)
                         const dateLabel = getDateLabel(date)
                         const bookings = bookingsByDate[date]
+                        const hasBookings = bookings.length > 0
 
                         return (
                             <div
                                 key={date}
-                                style={{
-                                    border: '1px solid #e5e5e5',
-                                    borderRadius: '8px',
-                                    padding: '12px',
-                                    backgroundColor: '#fafafa',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: '8px',
-                                    minHeight: '200px',
-                                }}
+                                className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden"
                             >
-                                <div style={{ fontWeight: 600, fontSize: '14px', textAlign: 'center' }}>
-                                    {dayLabel}
-                                </div>
-                                <div style={{ fontSize: '12px', color: '#666', textAlign: 'center' }}>
-                                    {dateLabel}
+                                {/* Day Header */}
+                                <div className="bg-gray-50 border-b border-gray-200 px-4 py-2">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-sm font-semibold text-gray-900">{dayLabel}</p>
+                                            <p className="text-xs text-gray-600">{dateLabel}</p>
+                                        </div>
+                                        {hasBookings && (
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                                {bookings.length}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
 
-                                <div
-                                    style={{
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        gap: '6px',
-                                        flex: 1,
-                                    }}
-                                >
-                                    {bookings.length === 0 ? (
-                                        <div style={{ fontSize: '12px', color: '#999', padding: '8px', textAlign: 'center' }}>
-                                            No bookings
-                                        </div>
+                                {/* Bookings List */}
+                                <div className="p-3 space-y-2">
+                                    {!hasBookings ? (
+                                        <p className="text-xs text-gray-500 text-center py-2">No bookings</p>
                                     ) : (
                                         bookings.map((booking) => {
                                             const displayStatus = toDisplayStatus(booking.status)
-                                            const style = bookingStyle(displayStatus)
                                             const customerLabel = booking.customer_name || (booking.is_walk_in ? 'Walk-in' : 'Customer')
                                             const actionsDisabled =
                                                 isActionPending ||
@@ -267,88 +252,62 @@ export default function WeekView({ selectedBarberId, selectedDate, isActionPendi
                                             return (
                                                 <div
                                                     key={booking.id}
-                                                    style={{
-                                                        padding: '10px',
-                                                        border: `1px solid ${style.border}`,
-                                                        borderRadius: '6px',
-                                                        backgroundColor: style.bg,
-                                                        color: style.text,
-                                                        display: 'flex',
-                                                        flexDirection: 'column',
-                                                        gap: '6px',
-                                                        fontSize: '12px',
-                                                    }}
+                                                    className="border border-gray-200 rounded-lg p-3 space-y-2"
                                                 >
-                                                    <div style={{ fontWeight: 600 }}>{booking.service_name}</div>
-                                                    <div>{customerLabel}</div>
-                                                    <div style={{ fontSize: '11px' }}>
-                                                        {formatTimeLabel(booking.start_time)} - {formatTimeLabel(booking.end_time)}
+                                                    {/* Booking Info */}
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-xs text-gray-600">
+                                                                {formatTimeLabel(booking.start_time)} - {formatTimeLabel(booking.end_time)}
+                                                            </p>
+                                                            <p className="text-sm font-medium text-gray-900 mt-0.5 truncate">
+                                                                {booking.service_name}
+                                                            </p>
+                                                            <p className="text-xs text-gray-600 mt-0.5">
+                                                                {customerLabel}
+                                                            </p>
+                                                        </div>
+                                                        
+                                                        {/* Status Badge */}
+                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap ${
+                                                            displayStatus === 'upcoming' ? 'bg-blue-100 text-blue-800' :
+                                                            displayStatus === 'completed' ? 'bg-emerald-100 text-emerald-800' :
+                                                            displayStatus === 'no_show' ? 'bg-red-100 text-red-800' :
+                                                            'bg-gray-100 text-gray-800'
+                                                        }`}>
+                                                            {displayStatus === 'upcoming' ? 'Upcoming' :
+                                                             displayStatus === 'completed' ? 'Done' :
+                                                             displayStatus === 'no_show' ? 'No Show' :
+                                                             'Cancelled'}
+                                                        </span>
                                                     </div>
-                                                    <div style={{ fontSize: '11px', fontWeight: 500 }}>{style.label}</div>
 
-                                                    <div
-                                                        style={{
-                                                            display: 'flex',
-                                                            gap: '4px',
-                                                            marginTop: '4px',
-                                                            flexWrap: 'wrap',
-                                                        }}
-                                                    >
-                                                        <button
-                                                            type="button"
-                                                            disabled={actionsDisabled}
-                                                            onClick={() => handleBookingAction(booking.id, 'completed')}
-                                                            style={{
-                                                                padding: '4px 8px',
-                                                                borderRadius: '4px',
-                                                                border: '1px solid #22c55e',
-                                                                backgroundColor: '#ecfdf3',
-                                                                color: '#166534',
-                                                                cursor: 'pointer',
-                                                                fontSize: '11px',
-                                                                flex: 1,
-                                                                minWidth: '60px',
-                                                            }}
-                                                        >
-                                                            Done
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            disabled={actionsDisabled}
-                                                            onClick={() => handleBookingAction(booking.id, 'no_show')}
-                                                            style={{
-                                                                padding: '4px 8px',
-                                                                borderRadius: '4px',
-                                                                border: '1px solid #facc15',
-                                                                backgroundColor: '#fefce8',
-                                                                color: '#854d0e',
-                                                                cursor: 'pointer',
-                                                                fontSize: '11px',
-                                                                flex: 1,
-                                                                minWidth: '60px',
-                                                            }}
-                                                        >
-                                                            No Show
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            disabled={actionsDisabled}
-                                                            onClick={() => handleBookingAction(booking.id, 'canceled')}
-                                                            style={{
-                                                                padding: '4px 8px',
-                                                                borderRadius: '4px',
-                                                                border: '1px solid #f87171',
-                                                                backgroundColor: '#fef2f2',
-                                                                color: '#7f1d1d',
-                                                                cursor: 'pointer',
-                                                                fontSize: '11px',
-                                                                flex: 1,
-                                                                minWidth: '60px',
-                                                            }}
-                                                        >
-                                                            Cancel
-                                                        </button>
-                                                    </div>
+                                                    {/* Actions */}
+                                                    {!actionsDisabled && (
+                                                        <div className="flex gap-1.5 pt-1">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleBookingAction(booking.id, 'completed')}
+                                                                className="flex-1 py-1.5 px-2 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded hover:bg-emerald-100 active:bg-emerald-200 transition-colors"
+                                                            >
+                                                                Done
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleBookingAction(booking.id, 'no_show')}
+                                                                className="flex-1 py-1.5 px-2 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded hover:bg-red-100 active:bg-red-200 transition-colors"
+                                                            >
+                                                                No Show
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleBookingAction(booking.id, 'canceled')}
+                                                                className="flex-1 py-1.5 px-2 text-xs font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )
                                         })
@@ -360,19 +319,15 @@ export default function WeekView({ selectedBarberId, selectedDate, isActionPendi
                 </div>
             )}
 
-            {(actionMessage || actionError) && (
-                <div
-                    style={{
-                        fontSize: '13px',
-                        color: actionError ? '#991b1b' : '#065f46',
-                        backgroundColor: actionError ? '#fee2e2' : '#d1fae5',
-                        border: '1px solid',
-                        borderColor: actionError ? '#fca5a5' : '#34d399',
-                        borderRadius: '6px',
-                        padding: '8px 10px',
-                    }}
-                >
-                    {actionError || actionMessage}
+            {/* Messages */}
+            {actionMessage && (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2 text-sm text-emerald-800">
+                    {actionMessage}
+                </div>
+            )}
+            {actionError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-sm text-red-800">
+                    {actionError}
                 </div>
             )}
         </section>

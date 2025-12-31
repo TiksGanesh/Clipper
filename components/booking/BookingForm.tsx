@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 type Shop = {
     id: string
@@ -34,6 +35,7 @@ type Props = {
 }
 
 export default function BookingForm({ shop, barbers, services }: Props) {
+    const router = useRouter()
     const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1)
     const [barberId, setBarberId] = useState(barbers[0]?.id ?? '')
     const [serviceIds, setServiceIds] = useState<string[]>([])
@@ -162,11 +164,20 @@ export default function BookingForm({ shop, barbers, services }: Props) {
         if (!res.ok) {
             throw new Error(body.error || 'Booking failed')
         }
-        setSuccess('Booking confirmed!')
-        setSlots([])
-        setSelectedSlot('')
-        setCustomerName('')
-        setCustomerPhone('')
+        
+        // Redirect to confirmation page with booking details
+        const selectedBarber = barbers.find(b => b.id === barberId)
+        const bookingParams = new URLSearchParams({
+            shop: shop.name,
+            barber: selectedBarber?.name || '',
+            services: selectedServiceName,
+            duration: String(totalDuration),
+            date: date,
+            time: selectedSlot,
+            customer: customerName.trim(),
+            phone: customerPhone.trim()
+        })
+        router.push(`/booking-confirmed?${bookingParams.toString()}`)
     }
 
     const formatSlot = (iso: string) => {
@@ -177,18 +188,18 @@ export default function BookingForm({ shop, barbers, services }: Props) {
     }
 
     return (
-        <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 md:p-6 space-y-6 max-w-full">
             {/* Step Header */}
-            <ol className="flex items-center gap-2 text-sm text-gray-600" aria-label="Steps">
-                <li className={step >= 1 ? 'text-indigo-600 font-medium' : ''}>1. Barber</li>
+            <ol className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-gray-600 overflow-x-auto no-scrollbar" aria-label="Steps">
+                <li className={step >= 1 ? 'text-indigo-600 font-medium whitespace-nowrap' : 'whitespace-nowrap'}>1. Barber</li>
                 <span className="text-gray-300">/</span>
-                <li className={step >= 2 ? 'text-indigo-600 font-medium' : ''}>2. Service</li>
+                <li className={step >= 2 ? 'text-indigo-600 font-medium whitespace-nowrap' : 'whitespace-nowrap'}>2. Service</li>
                 <span className="text-gray-300">/</span>
-                <li className={step >= 3 ? 'text-indigo-600 font-medium' : ''}>3. Time</li>
+                <li className={step >= 3 ? 'text-indigo-600 font-medium whitespace-nowrap' : 'whitespace-nowrap'}>3. Time</li>
                 <span className="text-gray-300">/</span>
-                <li className={step >= 4 ? 'text-indigo-600 font-medium' : ''}>4. Details</li>
+                <li className={step >= 4 ? 'text-indigo-600 font-medium whitespace-nowrap' : 'whitespace-nowrap'}>4. Details</li>
                 <span className="text-gray-300">/</span>
-                <li className={step >= 5 ? 'text-indigo-600 font-medium' : ''}>5. Payment</li>
+                <li className={step >= 5 ? 'text-indigo-600 font-medium whitespace-nowrap' : 'whitespace-nowrap'}>5. Payment</li>
             </ol>
 
             {/* Step 1: Select Barber */}
@@ -221,42 +232,63 @@ export default function BookingForm({ shop, barbers, services }: Props) {
 
             {/* Step 2: Select Service(s) */}
             <section aria-labelledby="step-service">
-                <h2 id="step-service" className="text-lg font-medium text-gray-900 mb-3">Select Service</h2>
-                <div className="grid grid-cols-1 gap-3">
-                    {services.map((s) => {
-                        const selected = serviceIds.includes(s.id)
-                        return (
-                            <button
-                                key={s.id}
-                                type="button"
-                                onClick={() => {
-                                    setServiceIds((prev) => {
-                                        const exists = prev.includes(s.id)
-                                        const next = exists ? prev.filter((id) => id !== s.id) : [...prev, s.id]
-                                        if (next.length > 0 && step < 3) setStep(3)
-                                        return next
-                                    })
-                                }}
-                                aria-pressed={selected}
-                                className={`w-full text-left rounded-lg border p-4 transition-colors ${
-                                    selected
-                                        ? 'border-indigo-600 ring-2 ring-indigo-500'
-                                        : 'border-gray-300 hover:border-gray-400'
-                                }`}
-                            >
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="font-medium text-gray-900">{s.name}</p>
-                                        <p className="text-sm text-gray-600">{s.duration_minutes} min{s.duration_minutes !== 1 ? 's' : ''}</p>
-                                    </div>
-                                    {typeof s.price === 'number' && (
-                                        <p className="text-sm font-medium text-gray-900">₹{s.price}</p>
-                                    )}
-                                </div>
-                            </button>
-                        )
-                    })}
+                <div className="flex items-center justify-between mb-3">
+                    <h2 id="step-service" className="text-lg font-medium text-gray-900">Select Service(s)</h2>
+                    {serviceIds.length > 0 && (
+                        <span className="text-sm text-indigo-600 font-medium">
+                            {serviceIds.length} selected
+                        </span>
+                    )}
                 </div>
+                
+                {/* Scrollable container with max height */}
+                <div className="border border-gray-200 rounded-lg max-h-64 overflow-y-auto">
+                    <div className="divide-y divide-gray-200">
+                        {services.map((s) => {
+                            const selected = serviceIds.includes(s.id)
+                            return (
+                                <label
+                                    key={s.id}
+                                    className={`flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-50 transition-colors ${
+                                        selected ? 'bg-indigo-50' : ''
+                                    }`}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={selected}
+                                        onChange={() => {
+                                            setServiceIds((prev) => {
+                                                const exists = prev.includes(s.id)
+                                                const next = exists ? prev.filter((id) => id !== s.id) : [...prev, s.id]
+                                                if (next.length > 0 && step < 3) setStep(3)
+                                                return next
+                                            })
+                                        }}
+                                        className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-2 focus:ring-indigo-500"
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-gray-900 truncate">{s.name}</p>
+                                        <p className="text-xs text-gray-600">
+                                            {s.duration_minutes} mins • ₹{s.price}
+                                        </p>
+                                    </div>
+                                </label>
+                            )
+                        })}
+                    </div>
+                </div>
+
+                {/* Show selected services summary */}
+                {serviceIds.length > 0 && (
+                    <div className="mt-3 bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+                        <p className="text-sm font-medium text-indigo-900 mb-1">
+                            {selectedServiceName}
+                        </p>
+                        <p className="text-xs text-indigo-700">
+                            Total: {totalDuration} mins
+                        </p>
+                    </div>
+                )}
             </section>
 
             {/* Step 3: Select Date & Time */}

@@ -28,103 +28,80 @@ type Props = {
 
 export default function WalkInForm({ shopId, barbers, services, onSuccess }: Props) {
     const [barberId, setBarberId] = useState(barbers[0]?.id ?? '')
-    const [serviceIds, setServiceIds] = useState<string[]>(services[0]?.id ? [services[0].id] : [])
+    const [serviceId, setServiceId] = useState(services[0]?.id ?? '')
     const [autoSlot, setAutoSlot] = useState<Slot | null>(null)
-    const [alternativeSlots, setAlternativeSlots] = useState<Slot[]>([])
-    const [showAlternatives, setShowAlternatives] = useState(false)
-    const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null)
     const [slotsLoading, setSlotsLoading] = useState(false)
     const [error, setError] = useState<string>('')
-    const [success, setSuccess] = useState<string>('')
     const [customerName, setCustomerName] = useState('')
     const [customerPhone, setCustomerPhone] = useState('')
     const [submitting, setSubmitting] = useState(false)
 
-    // Get browser timezone offset in minutes (negative for ahead of UTC)
     const timezoneOffset = useMemo(() => new Date().getTimezoneOffset(), [])
 
-    const totalDuration = useMemo(
-        () =>
-            services
-                .filter((s) => serviceIds.includes(s.id))
-                .reduce((sum, s) => sum + (s.duration_minutes || 0), 0),
-        [services, serviceIds]
-    )
+    const selectedService = services.find(s => s.id === serviceId)
 
-    // Auto-fetch slots when barber/services change
+    // Auto-fetch next available slot
     useEffect(() => {
-        if (!barberId || serviceIds.length === 0) {
+        if (!barberId || !serviceId) {
             setAutoSlot(null)
-            setAlternativeSlots([])
-            setSelectedSlot(null)
-            setShowAlternatives(false)
             return
         }
 
         const controller = new AbortController()
-        const fetchSlots = async () => {
+        const fetchSlot = async () => {
             setSlotsLoading(true)
             setError('')
             try {
-                // Use today's date for walk-in
                 const today = new Date().toISOString().slice(0, 10)
                 const params = new URLSearchParams({
                     barber_id: barberId,
                     date: today,
-                    service_ids: serviceIds.join(','),
+                    service_ids: serviceId,
                     timezone_offset: String(timezoneOffset),
                 })
                 const res = await fetch(`/api/slots?${params.toString()}`, { signal: controller.signal })
                 if (!res.ok) {
                     const body = await res.json().catch(() => ({}))
-                    throw new Error(body.error || 'Failed to load slots')
+                    throw new Error(body.error || 'No slots available')
                 }
                 const body = await res.json()
                 const slots = body.slots ?? []
 
                 if (slots.length === 0) {
-                    setError('No available slots for this barber today')
+                    setError('No slots available')
                     setAutoSlot(null)
-                    setAlternativeSlots([])
-                    setSelectedSlot(null)
                     return
                 }
 
-                // Auto-select first slot, show next 2 as alternatives
                 setAutoSlot(slots[0])
-                setSelectedSlot(slots[0])
-                setAlternativeSlots(slots.slice(1, 3))
             } catch (err: any) {
                 if (err.name === 'AbortError') return
                 setAutoSlot(null)
-                setAlternativeSlots([])
-                setSelectedSlot(null)
                 setError(err.message)
             } finally {
                 setSlotsLoading(false)
             }
         }
 
-        fetchSlots()
+        fetchSlot()
         return () => controller.abort()
-    }, [barberId, serviceIds, timezoneOffset])
+    }, [barberId, serviceId, timezoneOffset])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!barberId || serviceIds.length === 0 || !selectedSlot) {
-            setError('Please select a barber and services. Slot is auto-assigned.')
+        if (!barberId || !serviceId || !autoSlot) {
+            setError('Missing required information')
             return
         }
         setSubmitting(true)
         setError('')
-        setSuccess('')
         try {
             const res = await fetch('/api/walk-ins', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     barber_id: barberId,
-                    service_ids: serviceIds,
+                    service_ids: [serviceId],
                     customer_name: customerName.trim() || undefined,
                     customer_phone: customerPhone.trim() || undefined,
                     timezone_offset: timezoneOffset,
@@ -132,17 +109,8 @@ export default function WalkInForm({ shopId, barbers, services, onSuccess }: Pro
             })
             const body = await res.json().catch(() => ({}))
             if (!res.ok) {
-                throw new Error(body.error || 'Walk-in creation failed')
+                throw new Error(body.error || 'Failed to create walk-in')
             }
-            setSuccess(`Walk-in created! Booking ID: ${body.booking_id}`)
-            // Reset form
-            setBarberId(barbers[0]?.id ?? '')
-            setServiceIds(services[0]?.id ? [services[0].id] : [])
-            setCustomerName('')
-            setCustomerPhone('')
-            setAutoSlot(null)
-            setSelectedSlot(null)
-            setShowAlternatives(false)
             if (onSuccess) {
                 onSuccess(body.booking_id)
             }
@@ -153,132 +121,135 @@ export default function WalkInForm({ shopId, barbers, services, onSuccess }: Pro
         }
     }
 
-    const formatSlot = (iso: string) => {
+    const formatTime = (iso: string) => {
         const d = new Date(iso)
-        const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
-        return timeStr
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
     }
 
     return (
-        <form onSubmit={handleSubmit} className="bg-white shadow-sm rounded-lg p-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <label className="space-y-2">
-                    <span className="text-sm font-medium text-gray-700">Barber *</span>
-                    <select
-                        className="w-full border rounded px-3 py-2"
-                        value={barberId}
-                        onChange={(e) => setBarberId(e.target.value)}
-                    >
-                        <option value="">Select a barber</option>
-                        {barbers.map((b) => (
-                            <option key={b.id} value={b.id}>
-                                {b.name}
-                            </option>
-                        ))}
-                    </select>
-                </label>
-                <label className="space-y-2">
-                    <span className="text-sm font-medium text-gray-700">Services *</span>
-                    <select
-                        className="w-full border rounded px-3 py-2"
-                        multiple
-                        value={serviceIds}
-                        onChange={(e) => {
-                            const opts = Array.from(e.currentTarget.selectedOptions).map((o) => o.value)
-                            setServiceIds(opts)
-                        }}
-                    >
-                        {services.map((s) => (
-                            <option key={s.id} value={s.id}>
-                                {s.name} ({s.duration_minutes} mins)
-                            </option>
-                        ))}
-                    </select>
-                    <p className="text-xs text-gray-500">Hold Ctrl/Cmd to select multiple</p>
-                </label>
+        <form onSubmit={handleSubmit} className="bg-white rounded-t-xl md:rounded-xl border border-gray-200 shadow-md p-4 md:p-6 space-y-4 max-w-full">
+            {/* Header */}
+            <div className="space-y-1">
+                <h2 className="text-lg font-semibold text-gray-900">Add Walk-in</h2>
+                <p className="text-xs text-gray-600">Quickly add a customer who walked in.</p>
             </div>
 
-            {/* Auto-assigned slot display */}
+            {/* Barber Selection */}
             <div className="space-y-2">
-                <span className="text-sm font-medium text-gray-700">Assigned Slot</span>
-                {slotsLoading && <p className="text-sm text-blue-600">Loading available slots...</p>}
-                {!slotsLoading && autoSlot && (
-                    <div className="bg-blue-50 border border-blue-200 rounded p-3">
-                        <p className="text-sm font-semibold text-blue-900">
-                            {formatSlot(autoSlot.start)} - {formatSlot(autoSlot.end)}
-                        </p>
-                        <p className="text-xs text-blue-700 mt-1">Next available slot (auto-assigned)</p>
-                    </div>
-                )}
-                {!slotsLoading && !autoSlot && error && <p className="text-sm text-red-600">{error}</p>}
-
-                {/* Alternative slots toggle */}
-                {!slotsLoading && alternativeSlots.length > 0 && (
-                    <div className="mt-3">
+                <label className="text-sm font-medium text-gray-700">Barber</label>
+                <div className="flex gap-2">
+                    {barbers.slice(0, 2).map((barber) => (
                         <button
+                            key={barber.id}
                             type="button"
-                            className="text-sm text-blue-600 hover:underline"
-                            onClick={() => setShowAlternatives(!showAlternatives)}
+                            onClick={() => setBarberId(barber.id)}
+                            className={`flex-1 py-2.5 px-3 rounded-lg border text-sm font-medium transition-colors ${
+                                barberId === barber.id
+                                    ? 'bg-indigo-600 text-white border-indigo-600'
+                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                            }`}
                         >
-                            {showAlternatives ? 'Hide alternatives' : 'Pick different time'}
+                            {barber.name}
                         </button>
-                        {showAlternatives && (
-                            <div className="mt-2 flex flex-wrap gap-2">
-                                {alternativeSlots.map((slot) => (
-                                    <button
-                                        key={slot.start}
-                                        type="button"
-                                        className={`px-3 py-2 rounded border text-sm ${
-                                            selectedSlot?.start === slot.start
-                                                ? 'bg-blue-600 text-white'
-                                                : 'bg-white text-gray-800 hover:bg-gray-50'
-                                        }`}
-                                        onClick={() => setSelectedSlot(slot)}
-                                    >
-                                        {formatSlot(slot.start)}
-                                    </button>
-                                ))}
+                    ))}
+                </div>
+            </div>
+
+            {/* Service Selection */}
+            <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Service</label>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {services.map((service) => (
+                        <button
+                            key={service.id}
+                            type="button"
+                            onClick={() => setServiceId(service.id)}
+                            className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                                serviceId === service.id
+                                    ? 'border-indigo-600 bg-indigo-50 ring-2 ring-indigo-500'
+                                    : 'border-gray-200 bg-white hover:bg-gray-50'
+                            }`}
+                        >
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-medium text-gray-900">{service.name}</p>
+                                    <p className="text-xs text-gray-600">{service.duration_minutes} mins</p>
+                                </div>
+                                {serviceId === service.id && (
+                                    <svg className="w-5 h-5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                    </svg>
+                                )}
                             </div>
-                        )}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Time Display */}
+            <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Time</label>
+                {slotsLoading && (
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center">
+                        <p className="text-sm text-gray-600">Finding next slot...</p>
+                    </div>
+                )}
+                {!slotsLoading && autoSlot && (
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                        <p className="text-base font-semibold text-emerald-900">
+                            {formatTime(autoSlot.start)}
+                        </p>
+                        <p className="text-xs text-emerald-700 mt-0.5">Next available slot</p>
+                    </div>
+                )}
+                {!slotsLoading && !autoSlot && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                        <p className="text-sm text-red-800">No slots available</p>
                     </div>
                 )}
             </div>
 
-            {/* Optional customer info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <label className="space-y-2">
-                    <span className="text-sm font-medium text-gray-700">Customer Name (optional)</span>
-                    <input
-                        type="text"
-                        className="w-full border rounded px-3 py-2"
-                        value={customerName}
-                        onChange={(e) => setCustomerName(e.target.value)}
-                        placeholder="Defaults to 'Walk In'"
-                    />
-                </label>
-                <label className="space-y-2">
-                    <span className="text-sm font-medium text-gray-700">Phone (optional)</span>
-                    <input
-                        type="tel"
-                        className="w-full border rounded px-3 py-2"
-                        value={customerPhone}
-                        onChange={(e) => setCustomerPhone(e.target.value)}
-                        placeholder="Customer phone"
-                    />
-                </label>
+            {/* Optional Customer Info */}
+            <div className="space-y-3 pt-2 border-t border-gray-200">
+                <p className="text-xs font-medium text-gray-700">Customer Info (Optional)</p>
+                <input
+                    type="text"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    placeholder="Customer name"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+                <input
+                    type="tel"
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    placeholder="Phone number"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
             </div>
 
-            {error && !autoSlot && <p className="text-sm text-red-600 font-medium">{error}</p>}
-            {success && <p className="text-sm text-green-600 font-medium">{success}</p>}
+            {/* Error Message */}
+            {error && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-sm text-red-800">
+                    {error}
+                </div>
+            )}
 
-            <div className="flex justify-between items-center">
-                <div className="text-sm text-gray-600">Estimated duration: {totalDuration} mins</div>
+            {/* Actions */}
+            <div className="flex flex-col-reverse sm:flex-row gap-2 pt-2">
+                <button
+                    type="button"
+                    onClick={() => window.history.back()}
+                    className="flex-1 sm:flex-none px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
+                >
+                    Cancel
+                </button>
                 <button
                     type="submit"
-                    disabled={submitting || !selectedSlot || serviceIds.length === 0}
-                    className="bg-green-600 text-white px-4 py-2 rounded disabled:opacity-60 hover:bg-green-700"
+                    disabled={submitting || !autoSlot || !barberId || !serviceId}
+                    className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                    {submitting ? 'Creating Walk-In...' : 'Create Walk-In'}
+                    {submitting ? 'Adding...' : 'Add Walk-in'}
                 </button>
             </div>
         </form>

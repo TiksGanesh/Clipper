@@ -66,19 +66,19 @@ export default async function DashboardPage() {
     const firstBarberId = (barbers as Barber[])?.[0]?.id ?? ''
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gray-50 overflow-x-hidden">
             {/* Header */}
             <header className="bg-white shadow">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-                            <p className="text-gray-600 mt-1">Welcome back, <span className="font-medium">{user.email}</span></p>
+                <div className="max-w-7xl mx-auto px-4 py-4 md:py-6">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <div className="flex-1 min-w-0">
+                            <h1 className="text-xl md:text-3xl font-bold text-gray-900">Dashboard</h1>
+                            <p className="text-sm md:text-base text-gray-600 mt-1 truncate">Welcome, <span className="font-medium">{user.email}</span></p>
                         </div>
                         <form action="/api/auth/signout" method="POST">
                             <button
                                 type="submit"
-                                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition"
+                                className="px-3 py-1.5 md:px-4 md:py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition"
                             >
                                 Sign Out
                             </button>
@@ -87,47 +87,39 @@ export default async function DashboardPage() {
                 </div>
             </header>
 
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <main className="max-w-7xl mx-auto px-0 md:px-4 lg:px-6 py-4 md:py-6">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6">
                     {/* Calendar Section */}
-                    <div className="lg:col-span-3">
-                        <div className="bg-white rounded-lg shadow-sm p-6">
-                            <DayView
-                                barbers={(barbers as Barber[]) ?? []}
-                                initialDate={today}
-                                initialBarberId={firstBarberId}
-                                isReadOnly={false}
-                            />
-                        </div>
+                    <div className="lg:col-span-3 px-4 md:px-0">
+                        <DayView
+                            barbers={(barbers as Barber[]) ?? []}
+                            initialDate={today}
+                            initialBarberId={firstBarberId}
+                            isReadOnly={false}
+                        />
                     </div>
 
-                    {/* Sidebar Navigation */}
-                    <div className="lg:col-span-1">
-                        <div className="bg-white rounded-lg shadow-sm p-6 space-y-4">
+                    {/* Sidebar Navigation - Hidden on mobile, visible on desktop */}
+                    <div className="hidden lg:block lg:col-span-1">
+                        <div className="bg-white rounded-lg shadow-sm p-4 space-y-4">
                             <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
 
                             {/* Add Walk-In Button */}
                             <Link
                                 href="/dashboard/walk-in"
-                                className="flex items-center justify-between w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-md transition font-medium"
+                                className="flex items-center justify-center w-full px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition font-medium text-sm"
                             >
-                                <span>+ Walk-In Booking</span>
+                                + Walk-In Booking
                             </Link>
 
                             {/* Manage Services Link */}
                             <Link
                                 href="/dashboard/services"
-                                className="flex items-center justify-between w-full px-4 py-3 border border-gray-300 hover:bg-gray-50 text-gray-900 rounded-md transition font-medium"
+                                className="flex items-center justify-between w-full px-4 py-3 border border-gray-300 hover:bg-gray-50 text-gray-900 rounded-lg transition font-medium text-sm"
                             >
                                 <span>Manage Services</span>
                                 <span className="text-gray-400">→</span>
                             </Link>
-
-                            {/* Help Section */}
-                            <div className="pt-4 border-t border-gray-200 space-y-3">
-                                <h4 className="text-sm font-semibold text-gray-700">Help</h4>
-                                <p className="text-sm text-gray-600">Need help with bookings? Check your calendar view and use the action buttons to manage appointments.</p>
-                            </div>
                         </div>
                     </div>
                 </div>

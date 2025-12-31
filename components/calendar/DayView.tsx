@@ -320,78 +320,18 @@ export default function DayView({ barbers, initialDate, initialBarberId, isReadO
     })()
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <header
-                style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '12px',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                }}
-            >
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
-                    <label htmlFor="date-selector">Date</label>
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <button
-                            type="button"
-                            onClick={handlePrevDay}
-                            style={{
-                                padding: '8px 12px',
-                                border: '1px solid #ccc',
-                                backgroundColor: '#fff',
-                                cursor: 'pointer',
-                                borderRadius: '4px',
-                            }}
-                        >
-                            ← Prev
-                        </button>
-                        <input
-                            id="date-selector"
-                            type="date"
-                            disabled={isActionPending}
-                            value={selectedDate}
-                            onChange={(event) => setSelectedDate(event.target.value)}
-                            min={minDate}
-                            max={maxDate}
-                            style={{ width: 'auto' }}
-                        />
-                        <button
-                            type="button"
-                            onClick={handleNextDay}
-                            style={{
-                                padding: '8px 12px',
-                                border: '1px solid #ccc',
-                                backgroundColor: '#fff',
-                                cursor: 'pointer',
-                                borderRadius: '4px',
-                            }}
-                        >
-                            Next →
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleTodayClick}
-                            style={{
-                                padding: '8px 12px',
-                                border: '1px solid #4f46e5',
-                                backgroundColor: '#eef2ff',
-                                color: '#4f46e5',
-                                cursor: 'pointer',
-                                borderRadius: '4px',
-                                fontWeight: 600,
-                            }}
-                        >
-                            Today
-                        </button>
-                    </div>
-
-                    <label htmlFor="barber-selector">Barber</label>
+        <div className="space-y-4">
+            {/* Header Section */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <h1 className="text-xl font-semibold text-gray-900">Calendar</h1>
+                
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    {/* Barber Selector */}
                     <select
-                        id="barber-selector"
-                        disabled={isActionPending}
                         value={selectedBarberId}
-                        onChange={(event) => handleBarberChange(event.target.value)}
+                        onChange={(e) => handleBarberChange(e.target.value)}
+                        disabled={isActionPending}
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
                     >
                         {barbers.map((barber) => (
                             <option key={barber.id} value={barber.id}>
@@ -399,38 +339,82 @@ export default function DayView({ barbers, initialDate, initialBarberId, isReadO
                             </option>
                         ))}
                     </select>
-                </div>
 
-                <div style={{ display: 'inline-flex', gap: '8px' }}>
+                    {/* Today Button */}
                     <button
                         type="button"
-                        aria-pressed={viewMode === 'day'}
-                        onClick={() => setViewMode('day')}
-                        style={{
-                            padding: '8px 12px',
-                            border: '1px solid #ccc',
-                            backgroundColor: viewMode === 'day' ? '#f1f1f1' : '#fff',
-                            cursor: 'pointer',
-                        }}
+                        onClick={handleTodayClick}
+                        className="px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
                     >
-                        Day
-                    </button>
-                    <button
-                        type="button"
-                        aria-pressed={viewMode === 'week'}
-                        onClick={() => setViewMode('week')}
-                        style={{
-                            padding: '8px 12px',
-                            border: '1px solid #ccc',
-                            backgroundColor: viewMode === 'week' ? '#f1f1f1' : '#fff',
-                            cursor: 'pointer',
-                        }}
-                    >
-                        Week
+                        Today
                     </button>
                 </div>
-            </header>
+            </div>
 
+            {/* View Toggle */}
+            <div className="flex items-center gap-2 w-full">
+                <button
+                    type="button"
+                    onClick={() => setViewMode('day')}
+                    className={`flex-1 py-2 px-4 text-sm font-medium rounded-lg transition-colors ${
+                        viewMode === 'day'
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                    }`}
+                >
+                    Today
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setViewMode('week')}
+                    className={`flex-1 py-2 px-4 text-sm font-medium rounded-lg transition-colors ${
+                        viewMode === 'week'
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                    }`}
+                >
+                    Week
+                </button>
+            </div>
+
+            {/* Date Navigation (Day View Only) */}
+            {viewMode === 'day' && (
+                <div className="flex items-center justify-between gap-2 bg-white border border-gray-200 rounded-lg p-3">
+                    <button
+                        type="button"
+                        onClick={handlePrevDay}
+                        disabled={isActionPending}
+                        className="p-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    
+                    <input
+                        type="date"
+                        value={selectedDate}
+                        onChange={(e) => setSelectedDate(e.target.value)}
+                        disabled={isActionPending}
+                        min={minDate}
+                        max={maxDate}
+                        className="flex-1 text-center px-3 py-1 border-0 focus:outline-none text-sm font-medium text-gray-900"
+                    />
+                    
+                    <button
+                        type="button"
+                        onClick={handleNextDay}
+                        disabled={isActionPending}
+                        className="p-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                    </button>
+                </div>
+            )}
+
+            {/* Week View */}
             {viewMode === 'week' && (
                 <WeekView
                     selectedBarberId={selectedBarberId}
@@ -440,192 +424,174 @@ export default function DayView({ barbers, initialDate, initialBarberId, isReadO
                 />
             )}
 
+            {/* Day View */}
             {viewMode === 'day' && (
-                <section
-                    aria-label="Day view timeline"
-                    style={{
-                        border: '1px solid #ddd',
-                        borderRadius: '8px',
-                        padding: '16px',
-                        backgroundColor: '#fff',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '12px',
-                    }}
-                >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                        <div style={{ fontWeight: 600 }}>Day View (15-minute grid)</div>
-                        <div style={{ fontSize: '12px', color: '#555' }}>Times shown in your local time</div>
-                    </div>
+                <div className="space-y-2 pb-20 md:pb-4">
+                    {error && (
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-sm text-red-800">
+                            {error}
+                        </div>
+                    )}
 
-                    {error && <div style={{ color: '#b00020', fontSize: '14px' }}>{error}</div>}
-                    {loading && <div style={{ fontSize: '14px' }}>Loading timeline...</div>}
+                    {loading && (
+                        <div className="bg-white border border-gray-200 rounded-xl p-4 text-center text-gray-600 text-sm">
+                            Loading...
+                        </div>
+                    )}
 
                     {!loading && dayClosed && (
-                        <div style={{ padding: '12px', backgroundColor: '#f7f7f7', border: '1px solid #e5e5e5', borderRadius: '6px' }}>
-                            Closed or hours not set for this day.
+                        <div className="bg-gray-100 border border-gray-200 rounded-xl p-4 text-center text-gray-700 text-sm">
+                            Shop closed today
                         </div>
                     )}
 
                     {!loading && !dayClosed && rows.length === 0 && (
-                        <div style={{ padding: '12px', backgroundColor: '#f7f7f7', border: '1px solid #e5e5e5', borderRadius: '6px' }}>
-                            No slots available.
+                        <div className="bg-white border border-gray-200 rounded-xl p-4 text-center text-gray-600 text-sm">
+                            No appointments
                         </div>
                     )}
 
                     {!loading && !dayClosed && rows.length > 0 && (
-                        <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', borderTop: '1px solid #eee' }}>
+                        <div className="space-y-2">
                             {rows.map((row) => {
-                                const isHourMark = new Date(row.start).getMinutes() === 0
-
                                 if (row.kind === 'booking') {
-                                    const style = bookingStyle(row.displayStatus)
                                     const customerLabel = row.booking.customer_name || (row.booking.is_walk_in ? 'Walk-in' : 'Customer')
                                     const actionsDisabled = isActionPending || isReadOnly || row.displayStatus === 'completed' || row.displayStatus === 'canceled'
+                                    const isExpanded = selectedSlot === row.booking.id
+                                    
                                     return (
-                                        <div key={row.booking.id + row.start} style={{ display: 'contents' }}>
-                                            <div
-                                                style={{
-                                                    padding: '6px 8px',
-                                                    borderBottom: '1px solid #f3f3f3',
-                                                    fontSize: '12px',
-                                                    color: isHourMark ? '#333' : '#aaa',
-                                                }}
+                                        <div
+                                            key={row.booking.id + row.start}
+                                            className="bg-white border border-gray-200 rounded-xl shadow-sm"
+                                        >
+                                            {/* Main Card Content - Always Visible */}
+                                            <button
+                                                type="button"
+                                                onClick={() => setSelectedSlot(isExpanded ? '' : row.booking.id)}
+                                                className="w-full text-left p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-xl"
                                             >
-                                                {isHourMark ? formatTimeLabel(row.start) : ''}
-                                            </div>
-                                            <div
-                                                style={{
-                                                    padding: '10px 12px',
-                                                    margin: '4px 8px 4px 0',
-                                                    border: `1px solid ${style.border}`,
-                                                    borderRadius: '8px',
-                                                    backgroundColor: style.bg,
-                                                    color: style.text,
-                                                    display: 'flex',
-                                                    flexDirection: 'column',
-                                                    gap: '4px',
-                                                }}
-                                            >
-                                                <div style={{ fontWeight: 700, fontSize: '13px' }}>{row.booking.service_name}</div>
-                                                <div style={{ fontSize: '12px' }}>{customerLabel}</div>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px' }}>
-                                                    <span>{formatTimeLabel(row.start)} - {formatTimeLabel(row.end)}</span>
-                                                    <span style={{ fontWeight: 600 }}>{style.label}</span>
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-baseline gap-2">
+                                                            <p className="text-base font-semibold text-gray-900">
+                                                                {formatTimeLabel(row.start)}
+                                                            </p>
+                                                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                                                row.displayStatus === 'upcoming' ? 'bg-blue-100 text-blue-800' :
+                                                                row.displayStatus === 'completed' ? 'bg-emerald-100 text-emerald-800' :
+                                                                row.displayStatus === 'no_show' ? 'bg-red-100 text-red-800' :
+                                                                'bg-gray-100 text-gray-800'
+                                                            }`}>
+                                                                {row.displayStatus === 'upcoming' ? 'Upcoming' :
+                                                                 row.displayStatus === 'completed' ? 'Done' :
+                                                                 row.displayStatus === 'no_show' ? 'No Show' :
+                                                                 'Cancelled'}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-sm font-medium text-gray-900 mt-1 truncate break-words">
+                                                            {row.booking.service_name}
+                                                        </p>
+                                                        <p className="text-xs text-gray-600 mt-0.5">
+                                                            {customerLabel}
+                                                        </p>
+                                                    </div>
+                                                    {!actionsDisabled && (
+                                                        <svg 
+                                                            className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                                                            fill="none" 
+                                                            stroke="currentColor" 
+                                                            viewBox="0 0 24 24"
+                                                        >
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                        </svg>
+                                                    )}
                                                 </div>
-                                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
+                                            </button>
+
+                                            {/* Expandable Actions */}
+                                            {!actionsDisabled && isExpanded && (
+                                                <div className="px-3 pb-3 space-y-2 border-t border-gray-100 pt-2">
                                                     <button
                                                         type="button"
-                                                        disabled={actionsDisabled}
                                                         onClick={() => handleBookingAction(row.booking.id, 'completed')}
-                                                        style={{
-                                                            padding: '6px 10px',
-                                                            borderRadius: '6px',
-                                                            border: '1px solid #22c55e',
-                                                            backgroundColor: '#ecfdf3',
-                                                            color: '#166534',
-                                                            cursor: 'pointer',
-                                                        }}
+                                                        className="w-full py-2.5 px-3 text-sm font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 active:bg-emerald-200 transition-colors"
                                                     >
-                                                        Mark Completed
+                                                        ✓ Mark Completed
                                                     </button>
-                                                    <button
-                                                        type="button"
-                                                        disabled={actionsDisabled}
-                                                        onClick={() => handleBookingAction(row.booking.id, 'no_show')}
-                                                        style={{
-                                                            padding: '6px 10px',
-                                                            borderRadius: '6px',
-                                                            border: '1px solid #facc15',
-                                                            backgroundColor: '#fefce8',
-                                                            color: '#854d0e',
-                                                            cursor: 'pointer',
-                                                        }}
-                                                    >
-                                                        Mark No-show
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        disabled={actionsDisabled}
-                                                        onClick={() => handleBookingAction(row.booking.id, 'canceled')}
-                                                        style={{
-                                                            padding: '6px 10px',
-                                                            borderRadius: '6px',
-                                                            border: '1px solid #f87171',
-                                                            backgroundColor: '#fef2f2',
-                                                            color: '#7f1d1d',
-                                                            cursor: 'pointer',
-                                                        }}
-                                                    >
-                                                        Cancel Booking
-                                                    </button>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleBookingAction(row.booking.id, 'no_show')}
+                                                            className="py-2.5 px-3 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 active:bg-red-200 transition-colors"
+                                                        >
+                                                            No Show
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleBookingAction(row.booking.id, 'canceled')}
+                                                            className="py-2.5 px-3 text-sm font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            )}
                                         </div>
                                     )
                                 }
 
+                                // Skip most available slots to reduce clutter - show only every 4th slot
+                                const slotMinute = new Date(row.start).getMinutes()
+                                if (slotMinute % 60 !== 0) return null
+
                                 const selected = selectedSlot === row.start
                                 return (
-                                    <div key={row.start} style={{ display: 'contents' }}>
-                                        <div
-                                            style={{
-                                                padding: '6px 8px',
-                                                borderBottom: '1px solid #f3f3f3',
-                                                fontSize: '12px',
-                                                color: isHourMark ? '#333' : '#aaa',
-                                            }}
-                                        >
-                                            {isHourMark ? formatTimeLabel(row.start) : ''}
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setSelectedSlot(row.start)
-                                                setSlotMessage(`Add Booking modal placeholder for ${formatRange(row)}`)
-                                            }}
-                                            style={{
-                                                textAlign: 'left',
-                                                padding: '8px 10px',
-                                                border: `1px solid ${selected ? '#60a5fa' : '#d8d8d8'}`,
-                                                borderRadius: '6px',
-                                                margin: '4px 8px 4px 0',
-                                                backgroundColor: selected ? '#e0f2fe' : '#fff',
-                                                color: '#222',
-                                                cursor: 'pointer',
-                                                minHeight: '32px',
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                gap: '2px',
-                                            }}
-                                        >
-                                            <span style={{ fontSize: '13px', fontWeight: 600 }}>
-                                                {formatRange(row)}
-                                            </span>
-                                            <span style={{ fontSize: '12px', color: '#4a5568' }}>Available</span>
-                                        </button>
-                                    </div>
+                                    <button
+                                        key={row.start}
+                                        type="button"
+                                        onClick={() => {
+                                            setSelectedSlot(row.start)
+                                            setSlotMessage(`Add walk-in for ${formatRange(row)}`)
+                                        }}
+                                        className={`w-full text-left px-3 py-1.5 rounded-lg border transition-colors ${
+                                            selected
+                                                ? 'border-indigo-300 bg-indigo-50'
+                                                : 'border-gray-200 bg-gray-50 hover:bg-gray-100'
+                                        }`}
+                                    >
+                                        <span className="text-xs text-gray-500">
+                                            {formatTimeLabel(row.start)}
+                                        </span>
+                                    </button>
                                 )
                             })}
                         </div>
                     )}
 
-                    {selectedSlotLabel && (
-                        <div style={{ fontSize: '14px', color: '#0f5132', backgroundColor: '#d1e7dd', border: '1px solid #badbcc', borderRadius: '6px', padding: '8px 10px' }}>
-                            Selected slot: {selectedSlotLabel}
+                    {/* Messages */}
+                    {actionMessage && (
+                        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2 text-sm text-emerald-800">
+                            {actionMessage}
                         </div>
                     )}
-                    {slotMessage && (
-                        <div style={{ fontSize: '14px', color: '#1f2937', backgroundColor: '#e5e7eb', border: '1px dashed #9ca3af', borderRadius: '6px', padding: '8px 10px' }}>
-                            {slotMessage}
+                    {actionError && (
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-sm text-red-800">
+                            {actionError}
                         </div>
                     )}
-                    {(actionMessage || actionError) && (
-                        <div style={{ fontSize: '13px', color: actionError ? '#991b1b' : '#065f46', backgroundColor: actionError ? '#fee2e2' : '#d1fae5', border: '1px solid', borderColor: actionError ? '#fca5a5' : '#34d399', borderRadius: '6px', padding: '8px 10px' }}>
-                            {actionError || actionMessage}
-                        </div>
-                    )}
-                </section>
+                </div>
+            )}
+
+            {/* Sticky Add Walk-in Button (Mobile) */}
+            {viewMode === 'day' && !loading && !dayClosed && (
+                <div className="fixed bottom-4 left-4 right-4 md:hidden">
+                    <button
+                        type="button"
+                        className="w-full py-3 px-4 text-base font-medium text-white bg-indigo-600 rounded-lg shadow-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors"
+                    >
+                        + Add Walk-in
+                    </button>
+                </div>
             )}
         </div>
     )

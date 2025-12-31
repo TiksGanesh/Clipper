@@ -33,18 +33,18 @@ export default async function DashboardServicesPage() {
     const servicesList = (services ?? []) as any[]
 
     return (
-        <div className="max-w-4xl mx-auto py-10 space-y-8">
+        <div className="max-w-4xl mx-auto py-4 md:py-10 px-4 space-y-6 md:space-y-8 overflow-x-hidden">
             <header className="space-y-2">
-                <h1 className="text-2xl font-bold">Services</h1>
-                <p className="text-gray-600">Manage the services offered by your shop.</p>
+                <h1 className="text-xl md:text-2xl font-bold">Services</h1>
+                <p className="text-sm md:text-base text-gray-600">Manage your shop services.</p>
             </header>
 
-            <section className="bg-white shadow-sm rounded-lg p-6 space-y-4">
-                <h2 className="text-lg font-semibold">Add service</h2>
+            <section className="bg-white shadow-sm rounded-lg p-4 md:p-6 space-y-4">
+                <h2 className="text-base md:text-lg font-semibold">Add service</h2>
                 <form action={createServiceAction} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                     <label className="space-y-1">
                         <span className="text-sm text-gray-700">Name</span>
-                        <input name="name" required className="w-full border rounded px-3 py-2" placeholder="Haircut" />
+                        <input name="name" required className="w-full border rounded px-3 py-2 text-sm" placeholder="Haircut" />
                     </label>
                     <label className="space-y-1">
                         <span className="text-sm text-gray-700">Duration (minutes)</span>

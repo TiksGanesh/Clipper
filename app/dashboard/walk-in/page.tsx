@@ -48,19 +48,19 @@ export default async function WalkInPage() {
     ])
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gray-50 overflow-x-hidden">
             <nav className="bg-white shadow">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center h-16">
-                        <Link href="/dashboard" className="text-xl font-bold text-gray-900 hover:text-gray-700">
-                            ← Back to Dashboard
+                <div className="max-w-7xl mx-auto px-4">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-3 sm:py-0 sm:h-16 gap-2 sm:gap-4">
+                        <Link href="/dashboard" className="text-base sm:text-xl font-bold text-gray-900 hover:text-gray-700">
+                            ← Back
                         </Link>
-                        <div className="flex items-center gap-4">
-                            <span className="text-sm text-gray-600">{user.email}</span>
+                        <div className="flex items-center gap-2 sm:gap-4 text-sm">
+                            <span className="text-gray-600 truncate max-w-[150px] sm:max-w-none">{user.email}</span>
                             <form action="/api/auth/signout" method="POST">
                                 <button
                                     type="submit"
-                                    className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition"
+                                    className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition"
                                 >
                                     Sign Out
                                 </button>
@@ -70,10 +70,10 @@ export default async function WalkInPage() {
                 </div>
             </nav>
 
-            <main className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-                <div className="bg-white rounded-lg shadow-sm p-6">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Add Walk-In Booking</h1>
-                    <p className="text-gray-600 mb-8">Create a new walk-in appointment. Available slots will be auto-assigned to the next available time.</p>
+            <main className="max-w-4xl mx-auto py-4 md:py-6 px-4">
+                <div className="bg-white rounded-lg shadow-sm p-4 md:p-6">
+                    <h1 className="text-xl md:text-3xl font-bold text-gray-900 mb-2">Add Walk-In</h1>
+                    <p className="text-sm md:text-base text-gray-600 mb-6">Create a new walk-in appointment.</p>
 
                     <WalkInForm
                         shopId={shopId}

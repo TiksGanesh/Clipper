@@ -39,23 +39,15 @@ export default async function BarberCalendarPage({ searchParams }: { searchParam
     const today = new Date().toISOString().split('T')[0]
 
     return (
-        <main
-            style={{
-                padding: '24px',
-                maxWidth: '960px',
-                margin: '0 auto',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '16px',
-            }}
-        >
-            <h1 style={{ fontSize: '24px', fontWeight: 700 }}>Barber Calendar</h1>
-            <DayView
-                barbers={barberOptions}
-                initialDate={today}
-                initialBarberId={searchParams?.barber}
-                isReadOnly={false}
-            />
+        <main className="bg-gray-50 min-h-screen overflow-x-hidden">
+            <div className="max-w-7xl mx-auto p-4 md:p-6">
+                <DayView
+                    barbers={barberOptions}
+                    initialDate={today}
+                    initialBarberId={searchParams?.barber}
+                    isReadOnly={false}
+                />
+            </div>
         </main>
     )
 }
