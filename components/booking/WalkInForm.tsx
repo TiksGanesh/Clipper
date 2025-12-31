@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 type Barber = {
     id: string
@@ -23,16 +24,20 @@ type Props = {
     shopId: string
     barbers: Barber[]
     services: Service[]
+    shopPhone?: string
+    shopName?: string
     onSuccess?: (bookingId: string) => void
 }
 
-export default function WalkInForm({ shopId, barbers, services, onSuccess }: Props) {
+export default function WalkInForm({ shopId, barbers, services, shopPhone, shopName, onSuccess }: Props) {
+    const router = useRouter()
     const [barberId, setBarberId] = useState(barbers[0]?.id ?? '')
     const [serviceId, setServiceId] = useState(services[0]?.id ?? '')
-    const [autoSlot, setAutoSlot] = useState<Slot | null>(null)
+    const [availableSlots, setAvailableSlots] = useState<Slot[]>([])
+    const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null)
     const [slotsLoading, setSlotsLoading] = useState(false)
     const [error, setError] = useState<string>('')
-    const [customerName, setCustomerName] = useState('')
+    const [customerName, setCustomerName] = useState('Walk-In')
     const [customerPhone, setCustomerPhone] = useState('')
     const [submitting, setSubmitting] = useState(false)
 
@@ -40,17 +45,19 @@ export default function WalkInForm({ shopId, barbers, services, onSuccess }: Pro
 
     const selectedService = services.find(s => s.id === serviceId)
 
-    // Auto-fetch next available slot
+    // Fetch available slots (up to 2 immediate slots)
     useEffect(() => {
         if (!barberId || !serviceId) {
-            setAutoSlot(null)
+            setAvailableSlots([])
+            setSelectedSlot(null)
             return
         }
 
         const controller = new AbortController()
-        const fetchSlot = async () => {
+        const fetchSlots = async () => {
             setSlotsLoading(true)
             setError('')
+            setSelectedSlot(null)
             try {
                 const today = new Date().toISOString().slice(0, 10)
                 const params = new URLSearchParams({
@@ -69,41 +76,49 @@ export default function WalkInForm({ shopId, barbers, services, onSuccess }: Pro
 
                 if (slots.length === 0) {
                     setError('No slots available')
-                    setAutoSlot(null)
+                    setAvailableSlots([])
                     return
                 }
 
-                setAutoSlot(slots[0])
+                // Filter future slots and take first 2
+                const now = new Date()
+                const futureSlots = slots.filter((s: Slot) => new Date(s.start) > now)
+                setAvailableSlots(futureSlots.slice(0, 2))
             } catch (err: any) {
                 if (err.name === 'AbortError') return
-                setAutoSlot(null)
+                setAvailableSlots([])
                 setError(err.message)
             } finally {
                 setSlotsLoading(false)
             }
         }
 
-        fetchSlot()
+        fetchSlots()
         return () => controller.abort()
     }, [barberId, serviceId, timezoneOffset])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!barberId || !serviceId || !autoSlot) {
-            setError('Missing required information')
+        if (!barberId || !serviceId || !selectedSlot) {
+            setError('Please select a barber, service, and time slot')
             return
         }
         setSubmitting(true)
         setError('')
         try {
+            // Use shop phone if customer phone is not provided
+            const phoneToUse = customerPhone.trim() || shopPhone || null
+
             const res = await fetch('/api/walk-ins', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     barber_id: barberId,
                     service_ids: [serviceId],
-                    customer_name: customerName.trim() || undefined,
-                    customer_phone: customerPhone.trim() || undefined,
+                    customer_name: customerName.trim() || 'Walk-In',
+                    customer_phone: phoneToUse,
+                    start_time: selectedSlot.start,
+                    end_time: selectedSlot.end,
                     timezone_offset: timezoneOffset,
                 }),
             })
@@ -111,6 +126,25 @@ export default function WalkInForm({ shopId, barbers, services, onSuccess }: Pro
             if (!res.ok) {
                 throw new Error(body.error || 'Failed to create walk-in')
             }
+
+            // Get selected service and barber details for confirmation page
+            const selectedServiceObj = services.find(s => s.id === serviceId)
+            const selectedBarberObj = barbers.find(b => b.id === barberId)
+
+            // Redirect to confirmation page with walk-in flag
+            const params = new URLSearchParams({
+                booking_id: body.booking_id,
+                is_walk_in: 'true',
+                shop: shopName || 'Shop',
+                barber: selectedBarberObj?.name || 'Barber',
+                services: selectedServiceObj?.name || 'Service',
+                duration: String(selectedServiceObj?.duration_minutes || 0),
+                date: selectedSlot.start,
+                time: selectedSlot.start,
+                customer: customerName.trim() || 'Walk-In',
+            })
+            router.push(`/booking-confirmed?${params.toString()}`)
+
             if (onSuccess) {
                 onSuccess(body.booking_id)
             }
@@ -186,46 +220,83 @@ export default function WalkInForm({ shopId, barbers, services, onSuccess }: Pro
                 </div>
             </div>
 
-            {/* Time Display */}
+            {/* Time Display - Show up to 2 available slots */}
             <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Time</label>
+                <label className="text-sm font-medium text-gray-700">Time Slot</label>
                 {slotsLoading && (
                     <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center">
-                        <p className="text-sm text-gray-600">Finding next slot...</p>
+                        <p className="text-sm text-gray-600">Finding available slots...</p>
                     </div>
                 )}
-                {!slotsLoading && autoSlot && (
-                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-                        <p className="text-base font-semibold text-emerald-900">
-                            {formatTime(autoSlot.start)}
+                {!slotsLoading && availableSlots.length > 0 && (
+                    <div className="space-y-2">
+                        {availableSlots.map((slot, idx) => (
+                            <button
+                                key={idx}
+                                type="button"
+                                onClick={() => setSelectedSlot(slot)}
+                                className={`w-full p-3 rounded-lg border transition-colors text-left ${
+                                    selectedSlot?.start === slot.start
+                                        ? 'border-indigo-600 bg-indigo-50 ring-2 ring-indigo-500'
+                                        : 'border-gray-200 bg-white hover:bg-gray-50'
+                                }`}
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-900">
+                                            {formatTime(slot.start)}
+                                        </p>
+                                        <p className="text-xs text-gray-600 mt-0.5">Available now</p>
+                                    </div>
+                                    {selectedSlot?.start === slot.start && (
+                                        <svg className="w-5 h-5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                        </svg>
+                                    )}
+                                </div>
+                            </button>
+                        ))}
+                        <p className="text-xs text-gray-500 pt-2">
+                            Not available? Allow barber to pick from later slots
                         </p>
-                        <p className="text-xs text-emerald-700 mt-0.5">Next available slot</p>
                     </div>
                 )}
-                {!slotsLoading && !autoSlot && (
+                {!slotsLoading && availableSlots.length === 0 && !error && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                        <p className="text-sm text-yellow-800">
+                            No immediate slots available. Barber must pick from available times.
+                        </p>
+                    </div>
+                )}
+                {error && (
                     <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                        <p className="text-sm text-red-800">No slots available</p>
+                        <p className="text-sm text-red-800">{error}</p>
                     </div>
                 )}
             </div>
 
             {/* Optional Customer Info */}
             <div className="space-y-3 pt-2 border-t border-gray-200">
-                <p className="text-xs font-medium text-gray-700">Customer Info (Optional)</p>
+                <p className="text-xs font-medium text-gray-700">Customer Info</p>
                 <input
                     type="text"
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Customer name"
+                    placeholder="Customer name (defaults to 'Walk-In')"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 />
-                <input
-                    type="tel"
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    placeholder="Phone number"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                />
+                <div>
+                    <input
+                        type="tel"
+                        value={customerPhone}
+                        onChange={(e) => setCustomerPhone(e.target.value)}
+                        placeholder="Phone number (optional)"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                    {!customerPhone && shopPhone && (
+                        <p className="text-xs text-gray-500 mt-1">Shop phone will be used: {shopPhone}</p>
+                    )}
+                </div>
             </div>
 
             {/* Error Message */}
@@ -246,7 +317,7 @@ export default function WalkInForm({ shopId, barbers, services, onSuccess }: Pro
                 </button>
                 <button
                     type="submit"
-                    disabled={submitting || !autoSlot || !barberId || !serviceId}
+                    disabled={submitting || !selectedSlot || !barberId || !serviceId}
                     className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                     {submitting ? 'Adding...' : 'Add Walk-in'}

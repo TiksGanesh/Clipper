@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServiceSupabaseClient } from '@/lib/supabase'
 import { computeAvailableSlots, getUtcDayRange } from '@/lib/slots'
+import { isShopClosed } from '@/lib/shop-closure'
 
 // Helper to convert minutes since midnight to HH:MM:SS format
 function minutesToTimeString(minutes: number): string {
@@ -56,6 +57,41 @@ export async function GET(req: Request) {
 
     if (!barber || (barber as any).deleted_at || (barber as any).is_active === false) {
         return NextResponse.json({ error: 'Barber not found' }, { status: 404 })
+    }
+
+    // Check if shop is closed on this date
+    const { data: shopClosure, error: closureError } = await supabase
+        .from('shop_closures')
+        .select('closed_from, closed_to')
+        .eq('shop_id', (barber as any).shop_id)
+        .is('deleted_at', null)
+        .maybeSingle()
+
+    if (!closureError && shopClosure) {
+        const dateStr = date // date is in YYYY-MM-DD format
+        if (isShopClosed(dateStr, (shopClosure as any).closed_from, (shopClosure as any).closed_to)) {
+            return NextResponse.json({ error: 'Shop is closed on this date' }, { status: 400 })
+        }
+    }
+
+    // Check if barber is on leave on this date
+    const { data: barberLeave, error: leaveError } = await supabase
+        .from('barber_leaves')
+        .select('id, barber_id')
+        .eq('barber_id', barberId)
+        .eq('leave_date', date)
+        .maybeSingle()
+
+    if (!leaveError && barberLeave) {
+        // Get barber name for error message
+        const { data: barberData } = await supabase
+            .from('barbers')
+            .select('name')
+            .eq('id', barberId)
+            .single()
+        
+        const barberName = barberData?.name || 'This barber'
+        return NextResponse.json({ error: `${barberName} is on leave today. Please select another date or barber.` }, { status: 400 })
     }
 
     const { data: workingHours, error: hoursError } = await supabase

@@ -1,10 +1,16 @@
 'use client'
 
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+
 export default function BookingConfirmedPage({
   searchParams,
 }: {
   searchParams: { [key: string]: string | undefined }
 }) {
+  const router = useRouter()
+  const [redirectCountdown, setRedirectCountdown] = useState(5)
+
   const shop = searchParams.shop || 'Shop'
   const barber = searchParams.barber || 'Barber'
   const services = searchParams.services || 'Service'
@@ -12,6 +18,25 @@ export default function BookingConfirmedPage({
   const dateStr = searchParams.date || ''
   const timeStr = searchParams.time || ''
   const customer = searchParams.customer || ''
+  const isWalkIn = searchParams.is_walk_in === 'true'
+
+  // Auto-redirect for walk-ins after 5 seconds
+  useEffect(() => {
+    if (!isWalkIn) return
+
+    const timer = setInterval(() => {
+      setRedirectCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer)
+          router.push('/dashboard')
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [isWalkIn, router])
 
   // Format date
   const formattedDate = dateStr ? new Date(dateStr).toLocaleDateString('en-IN', {
@@ -33,9 +58,9 @@ export default function BookingConfirmedPage({
       <div className="w-full max-w-sm md:max-w-md bg-white border border-gray-200 rounded-xl shadow-sm p-6">
         {/* Success Indicator */}
         <div className="flex flex-col items-center mb-6">
-          <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mb-4">
+          <div className={`w-16 h-16 ${isWalkIn ? 'bg-blue-50' : 'bg-emerald-50'} rounded-full flex items-center justify-center mb-4`}>
             <svg 
-              className="w-8 h-8 text-emerald-500" 
+              className={`w-8 h-8 ${isWalkIn ? 'text-blue-500' : 'text-emerald-500'}`}
               fill="none" 
               stroke="currentColor" 
               viewBox="0 0 24 24"
@@ -50,8 +75,11 @@ export default function BookingConfirmedPage({
             </svg>
           </div>
           <h1 className="text-2xl font-semibold text-gray-900">
-            Booking Confirmed
+            {isWalkIn ? 'Walk-In Slot Booked' : 'Booking Confirmed'}
           </h1>
+          {isWalkIn && (
+            <p className="text-sm text-gray-600 mt-2">Redirecting to dashboard in {redirectCountdown}s...</p>
+          )}
         </div>
 
         {/* Booking Summary */}
@@ -107,18 +135,33 @@ export default function BookingConfirmedPage({
 
         {/* Important Instruction */}
         <div className="mb-6">
-          <p className="text-sm text-center text-gray-600">
-            Please arrive on time for your appointment.
-          </p>
+          {isWalkIn ? (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm text-blue-800 font-medium">
+                Walk-in slot created successfully. Slot is now blocked in the calendar.
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-center text-gray-600">
+              Please arrive on time for your appointment.
+            </p>
+          )}
         </div>
 
         {/* Primary Action */}
         <button
           type="button"
-          onClick={() => window.close()}
-          className="w-full bg-indigo-600 text-white font-medium py-3 px-4 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors"
+          onClick={() => {
+            if (isWalkIn) {
+              router.push('/dashboard')
+            } else {
+              window.close()
+            }
+          }}
+          className={`w-full ${isWalkIn ? 'bg-blue-600 hover:bg-blue-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white font-medium py-3 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors`}
+          style={{ focusRingColor: isWalkIn ? '#3B82F6' : '#4F46E5' }}
         >
-          Done
+          {isWalkIn ? 'Go to Dashboard' : 'Done'}
         </button>
       </div>
     </div>

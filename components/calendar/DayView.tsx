@@ -8,6 +8,7 @@ import {
     markBookingNoShowAction,
 } from '@/app/barber/calendar/actions'
 import WeekView from './WeekView'
+import AppointmentDetailSheet from './AppointmentDetailSheet'
 
 type BarberOption = {
     id: string
@@ -22,6 +23,7 @@ type DayBooking = {
     end_time: string
     service_name: string
     customer_name: string
+    customer_phone?: string
     status: BookingStatus
     is_walk_in: boolean
 }
@@ -157,6 +159,7 @@ export default function DayView({ barbers, initialDate, initialBarberId, isReadO
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string>('')
     const [selectedSlot, setSelectedSlot] = useState<string>('')
+    const [selectedBooking, setSelectedBooking] = useState<DayBooking | null>(null)
     const [slotMessage, setSlotMessage] = useState<string>('')
     const [actionMessage, setActionMessage] = useState<string>('')
     const [actionError, setActionError] = useState<string>('')
@@ -258,6 +261,7 @@ export default function DayView({ barbers, initialDate, initialBarberId, isReadO
     const handleBookingAction = (bookingId: string, status: BookingDisplayStatus) => {
         setActionMessage('')
         setActionError('')
+        setSelectedBooking(null)
 
         const action = status === 'completed'
             ? markBookingCompletedAction
@@ -467,7 +471,7 @@ export default function DayView({ barbers, initialDate, initialBarberId, isReadO
                                             {/* Main Card Content - Always Visible */}
                                             <button
                                                 type="button"
-                                                onClick={() => setSelectedSlot(isExpanded ? '' : row.booking.id)}
+                                                onClick={() => setSelectedBooking(row.booking)}
                                                 className="w-full text-left p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-xl"
                                             >
                                                 <div className="flex items-start justify-between gap-2">
@@ -495,47 +499,16 @@ export default function DayView({ barbers, initialDate, initialBarberId, isReadO
                                                             {customerLabel}
                                                         </p>
                                                     </div>
-                                                    {!actionsDisabled && (
-                                                        <svg 
-                                                            className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                                                            fill="none" 
-                                                            stroke="currentColor" 
-                                                            viewBox="0 0 24 24"
-                                                        >
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                                        </svg>
-                                                    )}
+                                                    <svg 
+                                                        className="w-5 h-5 text-gray-400"
+                                                        fill="none" 
+                                                        stroke="currentColor" 
+                                                        viewBox="0 0 24 24"
+                                                    >
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                                    </svg>
                                                 </div>
                                             </button>
-
-                                            {/* Expandable Actions */}
-                                            {!actionsDisabled && isExpanded && (
-                                                <div className="px-3 pb-3 space-y-2 border-t border-gray-100 pt-2">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleBookingAction(row.booking.id, 'completed')}
-                                                        className="w-full py-2.5 px-3 text-sm font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 active:bg-emerald-200 transition-colors"
-                                                    >
-                                                        ✓ Mark Completed
-                                                    </button>
-                                                    <div className="grid grid-cols-2 gap-2">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleBookingAction(row.booking.id, 'no_show')}
-                                                            className="py-2.5 px-3 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 active:bg-red-200 transition-colors"
-                                                        >
-                                                            No Show
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleBookingAction(row.booking.id, 'canceled')}
-                                                            className="py-2.5 px-3 text-sm font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors"
-                                                        >
-                                                            Cancel
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            )}
                                         </div>
                                     )
                                 }
@@ -592,6 +565,34 @@ export default function DayView({ barbers, initialDate, initialBarberId, isReadO
                         + Add Walk-in
                     </button>
                 </div>
+            )}
+
+            {/* Appointment Detail Bottom Sheet */}
+            {selectedBooking && (
+                <AppointmentDetailSheet
+                    isOpen={!!selectedBooking}
+                    onClose={() => setSelectedBooking(null)}
+                    serviceName={selectedBooking.service_name}
+                    appointmentTime={formatTimeLabel(selectedBooking.start_time)}
+                    status={selectedBooking.status}
+                    customerName={selectedBooking.customer_name || 'Walk-in'}
+                    customerPhone={selectedBooking.customer_phone}
+                    barberName={barbers.find(b => b.id === selectedBarberId)?.name || 'Barber'}
+                    dateTime={new Date(selectedBooking.start_time).toLocaleDateString('en-IN', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                    })}
+                    duration={Math.round((new Date(selectedBooking.end_time).getTime() - new Date(selectedBooking.start_time).getTime()) / 60000)}
+                    isWalkIn={selectedBooking.is_walk_in}
+                    onMarkCompleted={() => handleBookingAction(selectedBooking.id, 'completed')}
+                    onMarkNoShow={() => handleBookingAction(selectedBooking.id, 'no_show')}
+                    onCancel={() => handleBookingAction(selectedBooking.id, 'canceled')}
+                />
             )}
         </div>
     )

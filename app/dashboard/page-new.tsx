@@ -8,7 +8,6 @@ import { getBarberLeaveStatuses } from '@/lib/barber-leave'
 type Barber = {
     id: string
     name: string
-    isOnLeave?: boolean
 }
 
 type Service = {
@@ -63,14 +62,13 @@ export default async function DashboardPage() {
         redirect('/setup/services')
     }
 
-    // Fetch barber leave statuses for today
+    // Fetch barber leave statuses
     const leaveStatuses = await getBarberLeaveStatuses(shopId)
     const barbersWithLeaveStatus = (barbers as Barber[]).map((b) => ({
         ...b,
         isOnLeave: leaveStatuses[b.id] || false,
     }))
 
-    // Sign out function will be handled via a server action or API route
     const today = new Date().toISOString().split('T')[0]
     const firstBarberId = (barbers as Barber[])?.[0]?.id ?? ''
 
@@ -97,7 +95,7 @@ export default async function DashboardPage() {
             </header>
 
             <main className="max-w-7xl mx-auto px-0 md:px-4 lg:px-6 py-4 md:py-6">
-                {/* Mobile Quick Actions */}
+                {/* Mobile Quick Actions (Hidden on Desktop) */}
                 <div className="lg:hidden px-4 md:px-0 mb-4">
                     <DashboardContent barbers={barbersWithLeaveStatus} />
                 </div>

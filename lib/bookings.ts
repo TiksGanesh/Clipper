@@ -12,6 +12,7 @@ export type BarberCalendarBooking = {
     end_time: string
     service_name: string
     customer_name: string
+    customer_phone?: string
     status: BookingStatus
     is_walk_in: boolean
 }
@@ -59,7 +60,7 @@ export async function fetchBarberBookings(params: FetchParams): Promise<BarberCa
     let query = supabase
         .from('bookings')
         .select(
-            'id, start_time, end_time, status, customer_name, is_walk_in, services!inner ( name )'
+            'id, start_time, end_time, status, customer_name, customer_phone, is_walk_in, services!inner ( name )'
         )
         .eq('barber_id', barberId)
         .is('deleted_at', null)
@@ -84,6 +85,7 @@ export async function fetchBarberBookings(params: FetchParams): Promise<BarberCa
         end_time: booking.end_time,
         status: booking.status as BookingStatus,
         customer_name: booking.customer_name,
+        customer_phone: booking.customer_phone,
         is_walk_in: booking.is_walk_in,
         service_name: booking.services?.name ?? 'Unknown service',
     }))

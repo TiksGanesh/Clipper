@@ -22,7 +22,7 @@ export default async function WalkInPage() {
 
     const { data: shop } = await supabase
         .from('shops')
-        .select('id')
+        .select('id, phone, name')
         .eq('owner_id', user.id)
         .is('deleted_at', null)
         .maybeSingle()
@@ -31,6 +31,9 @@ export default async function WalkInPage() {
     if (!shopId) {
         redirect('/setup/shop')
     }
+
+    const shopPhone = (shop as { phone?: string } | null)?.phone
+    const shopName = (shop as { name?: string } | null)?.name
 
     const [{ data: barbers }, { data: services }] = await Promise.all([
         supabase
@@ -79,6 +82,8 @@ export default async function WalkInPage() {
                         shopId={shopId}
                         barbers={(barbers as Barber[]) ?? []}
                         services={(services as Service[]) ?? []}
+                        shopPhone={shopPhone}
+                        shopName={shopName}
                     />
                 </div>
             </main>
