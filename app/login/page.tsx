@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
-import Link from 'next/link'
 
 export default function LoginPage() {
     const [email, setEmail] = useState('')
@@ -19,6 +18,14 @@ export default function LoginPage() {
 
         try {
             const supabase = createClient()
+            
+            // Sign out any existing session first
+            // This ensures a clean login for the new user
+            await supabase.auth.signOut()
+            
+            // Wait for signout to complete
+            await new Promise(resolve => setTimeout(resolve, 100))
+            
             const { error: signInError } = await supabase.auth.signInWithPassword({
                 email,
                 password,
@@ -29,9 +36,14 @@ export default function LoginPage() {
                 return
             }
 
-            // Redirect to dashboard after successful login
-            router.push('/dashboard')
+            // Wait for session to be fully established
+            await new Promise(resolve => setTimeout(resolve, 100))
+            
+            // Refresh to ensure middleware picks up the new session
             router.refresh()
+            
+            // Redirect to dashboard
+            router.push('/dashboard')
         } catch (err) {
             setError('An unexpected error occurred')
         } finally {
@@ -108,19 +120,6 @@ export default function LoginPage() {
                             {loading ? 'Signing in...' : 'Sign in'}
                         </button>
                     </form>
-
-                    {/* Signup Link */}
-                    <div className="text-center">
-                        <p className="text-sm text-gray-600">
-                            Don't have an account?{' '}
-                            <Link
-                                href="/signup"
-                                className="font-medium text-indigo-600 hover:text-indigo-700 focus:outline-none focus:underline"
-                            >
-                                Create new account
-                            </Link>
-                        </p>
-                    </div>
                 </div>
             </div>
         </div>

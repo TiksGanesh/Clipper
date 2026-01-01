@@ -1,6 +1,6 @@
 'use server'
 
-import { requireAuth } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth'
 import { createServerActionClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
 import type { Database } from '@/types/database'
@@ -16,7 +16,7 @@ const days = [
 ]
 
 export async function createShopAction(formData: FormData) {
-    const user = await requireAuth()
+    const user = await requireAdmin()
     const supabase = await createServerActionClient()
 
     const name = (formData.get('name') as string)?.trim()
@@ -82,7 +82,7 @@ export async function createShopAction(formData: FormData) {
 }
 
 export async function saveBarbersAction(formData: FormData) {
-    const user = await requireAuth()
+    const user = await requireAdmin()
     const supabase = await createServerActionClient()
 
     // Get shop_id for this user
@@ -132,7 +132,7 @@ export async function saveBarbersAction(formData: FormData) {
 }
 
 export async function saveHoursAction(formData: FormData) {
-    const user = await requireAuth()
+    const user = await requireAdmin()
     const supabase = await createServerActionClient()
 
     const { data: shop } = await supabase
@@ -173,7 +173,7 @@ export async function saveHoursAction(formData: FormData) {
 }
 
 export async function saveServicesAction(formData: FormData) {
-    const user = await requireAuth()
+    const user = await requireAdmin()
     const supabase = await createServerActionClient()
 
     const { data: shop } = await supabase

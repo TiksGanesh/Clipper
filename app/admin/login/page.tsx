@@ -16,6 +16,20 @@ export default function AdminLoginPage() {
         setError(null)
 
         try {
+            // Sign out any existing session first by calling signout endpoint
+            // This ensures a clean login for the new admin user
+            try {
+                await fetch('/api/admin/signout', {
+                    method: 'POST',
+                })
+            } catch (error) {
+                // Signout failure is not critical, continue with login
+                console.log('Signout attempt completed')
+            }
+            
+            // Wait for signout to complete
+            await new Promise(resolve => setTimeout(resolve, 100))
+            
             const res = await fetch('/api/admin/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -35,8 +49,12 @@ export default function AdminLoginPage() {
                 localStorage.setItem('adminRefreshToken', data.refreshToken || '')
             }
 
+            // Wait for session to be fully established
+            await new Promise(resolve => setTimeout(resolve, 100))
+            
             // Redirect to dashboard
             router.push('/admin/dashboard')
+            router.refresh()
         } catch (error) {
             setError('Network error')
         } finally {

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { requireAuth } from '@/lib/auth'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import EditShopInformation from '@/components/dashboard/EditShopInformation'
+import SetupPendingMessage from '@/components/dashboard/SetupPendingMessage'
 
 export default async function EditShopPage() {
     const user = await requireAuth()
@@ -16,7 +17,7 @@ export default async function EditShopPage() {
         .maybeSingle()
 
     if (!shop) {
-        redirect('/setup/shop')
+        return <SetupPendingMessage userEmail={user.email ?? ''} step="shop" />
     }
 
     // Fetch barbers

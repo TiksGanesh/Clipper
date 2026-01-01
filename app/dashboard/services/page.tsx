@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { requireAuth } from '@/lib/auth'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import ManageServicesClient from '@/components/dashboard/ManageServicesClient'
+import SetupPendingMessage from '@/components/dashboard/SetupPendingMessage'
 
 export default async function DashboardServicesPage() {
     const user = await requireAuth()
@@ -18,7 +19,7 @@ export default async function DashboardServicesPage() {
 
     const shopId = shop?.id
     if (!shopId) {
-        redirect('/setup/shop')
+        return <SetupPendingMessage userEmail={user.email ?? ''} step="shop" />
     }
 
     const { data: services, error } = await supabase

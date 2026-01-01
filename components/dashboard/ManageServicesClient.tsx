@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
+import { createServiceAction, updateServiceAction, deleteServiceAction } from '@/app/dashboard/services/actions'
 
 type Service = {
     id: string
@@ -33,6 +34,8 @@ export default function ManageServicesClient({ services, userEmail, errorMessage
     const [modalMode, setModalMode] = useState<ModalMode>(null)
     const [editing, setEditing] = useState<Service | null>(null)
     const [confirmDelete, setConfirmDelete] = useState<Service | null>(null)
+    const [isLoading, setIsLoading] = useState(false)
+    const [error, setError] = useState<string>('')
 
     const [name, setName] = useState('')
     const [duration, setDuration] = useState<number>(30)
@@ -44,6 +47,7 @@ export default function ManageServicesClient({ services, userEmail, errorMessage
         setEditing(null)
         setName('')
         setDuration(30)
+        setError('')
     }
 
     const openEdit = (svc: Service) => {
@@ -51,54 +55,99 @@ export default function ManageServicesClient({ services, userEmail, errorMessage
         setEditing(svc)
         setName(svc.name)
         setDuration(svc.duration)
+        setError('')
     }
 
     const closeModal = () => {
         setModalMode(null)
         setEditing(null)
+        setError('')
     }
 
-    const handleSave = () => {
-        if (!name.trim()) return
-        if (!duration) return
-
-        if (modalMode === 'add') {
-            setItems((prev) => [
-                ...prev,
-                {
-                    id: crypto.randomUUID(),
-                    name: name.trim(),
-                    duration,
-                    isActive: true,
-                },
-            ])
+    const handleSave = async () => {
+        if (!name.trim()) {
+            setError('Service name is required')
+            return
+        }
+        if (!duration) {
+            setError('Duration is required')
+            return
         }
 
-        if (modalMode === 'edit' && editing) {
-            setItems((prev) =>
-                prev.map((svc) =>
-                    svc.id === editing.id
-                        ? {
-                              ...svc,
-                              name: name.trim(),
-                              duration,
-                          }
-                        : svc
-                )
-            )
+        setIsLoading(true)
+        setError('')
+
+        try {
+            if (modalMode === 'add') {
+                const formData = new FormData()
+                formData.append('name', name.trim())
+                formData.append('duration', duration.toString())
+                formData.append('price', '0')
+                await createServiceAction(formData)
+                // Refresh the page to show the new service
+                window.location.reload()
+            }
+
+            if (modalMode === 'edit' && editing) {
+                const formData = new FormData()
+                formData.append('id', editing.id)
+                formData.append('name', name.trim())
+                formData.append('duration', duration.toString())
+                formData.append('price', '0')
+                formData.append('is_active', editing.isActive ? 'on' : 'off')
+                await updateServiceAction(formData)
+                // Refresh the page to show updated service
+                window.location.reload()
+            }
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'An error occurred')
+        } finally {
+            setIsLoading(false)
         }
-
-        closeModal()
     }
 
-    const toggleActive = (id: string) => {
-        setItems((prev) => prev.map((svc) => (svc.id === id ? { ...svc, isActive: !svc.isActive } : svc)))
+    const toggleActive = async (id: string) => {
+        const service = items.find((s) => s.id === id)
+        if (!service) return
+
+        setIsLoading(true)
+        setError('')
+
+        try {
+            const formData = new FormData()
+            formData.append('id', id)
+            formData.append('name', service.name)
+            formData.append('duration', service.duration.toString())
+            formData.append('price', '0')
+            formData.append('is_active', (!service.isActive) ? 'on' : 'off')
+            await updateServiceAction(formData)
+            // Refresh the page to show updated status
+            window.location.reload()
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to update service')
+        } finally {
+            setIsLoading(false)
+        }
     }
 
-    const confirmDeleteService = () => {
+    const confirmDeleteService = async () => {
         if (!confirmDelete) return
-        setItems((prev) => prev.filter((svc) => svc.id !== confirmDelete.id))
-        setConfirmDelete(null)
+
+        setIsLoading(true)
+        setError('')
+
+        try {
+            const formData = new FormData()
+            formData.append('id', confirmDelete.id)
+            await deleteServiceAction(formData)
+            // Refresh the page to show the deletion
+            window.location.reload()
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to delete service')
+        } finally {
+            setIsLoading(false)
+            setConfirmDelete(null)
+        }
     }
 
     return (
@@ -220,12 +269,19 @@ export default function ManageServicesClient({ services, userEmail, errorMessage
                                 <button
                                     type="button"
                                     onClick={closeModal}
-                                    className="text-gray-500 hover:text-gray-700"
+                                    disabled={isLoading}
+                                    className="text-gray-500 hover:text-gray-700 disabled:opacity-50"
                                     aria-label="Close"
                                 >
                                     ✕
                                 </button>
                             </div>
+
+                            {error && (
+                                <div className="bg-red-50 border border-red-200 text-red-800 text-sm rounded-lg px-3 py-2">
+                                    {error}
+                                </div>
+                            )}
 
                             <div className="space-y-4">
                                 <label className="space-y-1 block">
@@ -234,7 +290,8 @@ export default function ManageServicesClient({ services, userEmail, errorMessage
                                         value={name}
                                         onChange={(e) => setName(e.target.value)}
                                         placeholder="Enter service name"
-                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        disabled={isLoading}
+                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                                     />
                                 </label>
 
@@ -243,7 +300,8 @@ export default function ManageServicesClient({ services, userEmail, errorMessage
                                     <select
                                         value={duration}
                                         onChange={(e) => setDuration(Number(e.target.value))}
-                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                                        disabled={isLoading}
+                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
                                     >
                                         {DURATION_OPTIONS.map((opt) => (
                                             <option key={opt} value={opt}>
@@ -258,14 +316,16 @@ export default function ManageServicesClient({ services, userEmail, errorMessage
                                 <button
                                     type="button"
                                     onClick={handleSave}
-                                    className="w-full inline-flex justify-center items-center px-4 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                                    disabled={isLoading}
+                                    className="w-full inline-flex justify-center items-center px-4 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:bg-indigo-400 disabled:cursor-not-allowed"
                                 >
-                                    {modalMode === 'add' ? 'Add Service' : 'Save Changes'}
+                                    {isLoading ? 'Saving...' : modalMode === 'add' ? 'Add Service' : 'Save Changes'}
                                 </button>
                                 <button
                                     type="button"
                                     onClick={closeModal}
-                                    className="w-full text-sm font-semibold text-gray-700 hover:text-gray-900 focus:outline-none"
+                                    disabled={isLoading}
+                                    className="w-full text-sm font-semibold text-gray-700 hover:text-gray-900 focus:outline-none disabled:opacity-50"
                                 >
                                     Cancel
                                 </button>
@@ -278,7 +338,7 @@ export default function ManageServicesClient({ services, userEmail, errorMessage
             {/* Delete Confirmation */}
             {confirmDelete && (
                 <div className="fixed inset-0 z-40">
-                    <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setConfirmDelete(null)} />
+                    <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => !isLoading && setConfirmDelete(null)} />
                     <div className="fixed inset-x-0 bottom-0 md:inset-0 md:flex md:items-center md:justify-center px-4 md:px-0">
                         <div className="bg-white rounded-t-xl md:rounded-xl border border-gray-200 shadow-md w-full md:max-w-md md:mx-auto p-4 md:p-6 space-y-4">
                             <div className="space-y-1">
@@ -289,14 +349,16 @@ export default function ManageServicesClient({ services, userEmail, errorMessage
                                 <button
                                     type="button"
                                     onClick={confirmDeleteService}
-                                    className="w-full inline-flex justify-center items-center px-4 py-2.5 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                                    disabled={isLoading}
+                                    className="w-full inline-flex justify-center items-center px-4 py-2.5 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:bg-red-400 disabled:cursor-not-allowed"
                                 >
-                                    Delete
+                                    {isLoading ? 'Deleting...' : 'Delete'}
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setConfirmDelete(null)}
-                                    className="w-full text-sm font-semibold text-gray-700 hover:text-gray-900 focus:outline-none"
+                                    disabled={isLoading}
+                                    className="w-full text-sm font-semibold text-gray-700 hover:text-gray-900 focus:outline-none disabled:opacity-50"
                                 >
                                     Cancel
                                 </button>

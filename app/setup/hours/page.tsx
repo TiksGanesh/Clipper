@@ -1,4 +1,4 @@
-import { requireAuth } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
 import { saveHoursAction } from '@/app/setup/actions'
@@ -15,7 +15,7 @@ const days = [
 ]
 
 export default async function SetupHoursPage() {
-    const user = await requireAuth()
+    const user = await requireAdmin()
     const supabase = await createServerSupabaseClient()
 
     type ShopId = Pick<Database['public']['Tables']['shops']['Row'], 'id'>

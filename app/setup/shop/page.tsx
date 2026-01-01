@@ -1,4 +1,4 @@
-import { requireAuth } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth'
 import { createShopAction } from '@/app/setup/actions'
 
 export default async function SetupShopPage({
@@ -6,7 +6,7 @@ export default async function SetupShopPage({
 }: {
     searchParams: { error?: string }
 }) {
-    await requireAuth()
+    await requireAdmin()
 
     return (
         <div className="max-w-lg mx-auto py-10">

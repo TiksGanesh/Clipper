@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { saveShopClosureAction } from '@/app/dashboard/edit-shop/actions'
+import { saveShopClosureAction, saveShopNameAction, saveWorkingHoursAction, saveBarberDetailsAction } from '@/app/dashboard/edit-shop/actions'
 
 type Shop = {
     id: string
@@ -67,20 +67,46 @@ export default function EditShopInformation({ shop, barbers, workingHours, userE
         setSaveError('')
         setSaveSuccess(false)
 
-        // Save shop closure
-        const closureResult = await saveShopClosureAction(closedFrom, closedTo, closureReason, isClosed)
-        if (!closureResult.success) {
-            setSaveError(closureResult.error || 'Failed to save')
-            setIsSaving(false)
-            return
-        }
+        try {
+            // Save shop name
+            const nameResult = await saveShopNameAction(shopName)
+            if (!nameResult.success) {
+                setSaveError(nameResult.error || 'Failed to save shop name')
+                setIsSaving(false)
+                return
+            }
 
-        // TODO: Save shop name, hours, barber data to database
-        setTimeout(() => {
-            setIsSaving(false)
+            // Save working hours
+            const hoursResult = await saveWorkingHoursAction(hours)
+            if (!hoursResult.success) {
+                setSaveError(hoursResult.error || 'Failed to save working hours')
+                setIsSaving(false)
+                return
+            }
+
+            // Save barber details
+            const barberResult = await saveBarberDetailsAction(barberData)
+            if (!barberResult.success) {
+                setSaveError(barberResult.error || 'Failed to save barber details')
+                setIsSaving(false)
+                return
+            }
+
+            // Save shop closure
+            const closureResult = await saveShopClosureAction(closedFrom, closedTo, closureReason, isClosed)
+            if (!closureResult.success) {
+                setSaveError(closureResult.error || 'Failed to save shop closure')
+                setIsSaving(false)
+                return
+            }
+
             setSaveSuccess(true)
             setTimeout(() => setSaveSuccess(false), 3000)
-        }, 500)
+        } catch (error) {
+            setSaveError(error instanceof Error ? error.message : 'An error occurred while saving')
+        } finally {
+            setIsSaving(false)
+        }
     }
 
     return (

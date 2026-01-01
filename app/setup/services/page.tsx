@@ -1,10 +1,10 @@
-import { requireAuth } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
 import { saveServicesAction } from '@/app/setup/actions'
 
 export default async function SetupServicesPage() {
-    const user = await requireAuth()
+    const user = await requireAdmin()
     const supabase = await createServerSupabaseClient()
 
     const { data: shop } = await supabase

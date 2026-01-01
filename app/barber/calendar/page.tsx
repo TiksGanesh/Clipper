@@ -2,6 +2,7 @@ import { requireAuth } from '@/lib/auth'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
 import DayView from '@/components/calendar/DayView'
+import SetupPendingMessage from '@/components/dashboard/SetupPendingMessage'
 
 type BarberOption = {
     id: string
@@ -21,7 +22,7 @@ export default async function BarberCalendarPage({ searchParams }: { searchParam
 
     const shopId = shop?.id
     if (!shopId) {
-        redirect('/setup/shop')
+        return <SetupPendingMessage userEmail={user.email ?? ''} step="shop" />
     }
 
     const { data: barbers } = await supabase
@@ -33,7 +34,7 @@ export default async function BarberCalendarPage({ searchParams }: { searchParam
 
     const barberOptions = (barbers as BarberOption[] | null) ?? []
     if (barberOptions.length === 0) {
-        redirect('/setup/barbers')
+        return <SetupPendingMessage userEmail={user.email ?? ''} step="barbers" />
     }
 
     const today = new Date().toISOString().split('T')[0]

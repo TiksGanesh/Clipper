@@ -1,8 +1,11 @@
 
 
+import { requireAuth } from '@/lib/auth'
+import { createServerSupabaseClient } from '@/lib/supabase'
 import { getShopAdminDashboardCounts, getLatestSetupPendingShops } from '@/lib/admin-dashboard'
 
 export default async function AdminDashboardPage() {
+    const user = await requireAuth()
     let counts = null
     let setupPending = null
     let errorMsg = ''
@@ -16,8 +19,32 @@ export default async function AdminDashboardPage() {
     }
 
     return (
-        <main>
-            <h1>Admin Dashboard</h1>
+        <>
+            <header style={{ background: '#f5f5f5', borderBottom: '1px solid #ddd', padding: '16px 0', marginBottom: '32px' }}>
+                <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h1 style={{ margin: 0 }}>Admin Dashboard</h1>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <span style={{ color: '#666', fontSize: '14px' }}>Welcome, {user.email}</span>
+                        <form action="/api/admin/signout" method="POST" style={{ margin: 0 }}>
+                            <button
+                                type="submit"
+                                style={{
+                                    padding: '8px 16px',
+                                    background: '#dc2626',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontSize: '14px',
+                                }}
+                            >
+                                Sign Out
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </header>
+            <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 16px' }}>
                 {errorMsg ? (
                   <div style={{ margin: '32px 0', padding: 16, border: '1px solid #f00', borderRadius: 8, background: '#fff0f0' }}>
                     <strong>{errorMsg}</strong>
@@ -92,6 +119,7 @@ export default async function AdminDashboardPage() {
             </section>
                   </>
                 )}
-        </main>
+            </main>
+        </>
     )
 }

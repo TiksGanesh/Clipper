@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import DayView from '@/components/calendar/DayView'
 import DashboardContent from './dashboard-content'
 import { getBarberLeaveStatuses } from '@/lib/barber-leave'
+import SetupPendingMessage from '@/components/dashboard/SetupPendingMessage'
 
 type Barber = {
     id: string
@@ -32,7 +33,7 @@ export default async function DashboardPage() {
 
     const shopId = (shop as { id: string } | null)?.id
     if (!shopId) {
-        redirect('/setup/shop')
+        return <SetupPendingMessage userEmail={user.email ?? ''} step="shop" />
     }
 
     const [{ count: barberCount }, { count: servicesCount }, { count: hoursCount }, { data: barbers }, { data: services }] = await Promise.all([
@@ -54,13 +55,13 @@ export default async function DashboardPage() {
     ])
 
     if (!barberCount || barberCount < 1) {
-        redirect('/setup/barbers')
+        return <SetupPendingMessage userEmail={user.email ?? ''} step="barbers" />
     }
     if (!hoursCount || hoursCount < 1) {
-        redirect('/setup/hours')
+        return <SetupPendingMessage userEmail={user.email ?? ''} step="hours" />
     }
     if (!servicesCount || servicesCount < 1) {
-        redirect('/setup/services')
+        return <SetupPendingMessage userEmail={user.email ?? ''} step="services" />
     }
 
     // Fetch barber leave statuses for today

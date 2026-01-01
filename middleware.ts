@@ -2,15 +2,21 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 /**
- * Middleware to protect routes and refresh auth tokens
+ * Middleware to protect routes and manage dual sessions
+ * 
+ * Session Strategy:
+ * - Barber: Standard Supabase cookies (default storage)
+ * - Admin: Separate admin session detection via admin_users table
  * 
  * Protected routes:
- * - /dashboard/* - requires authentication
- * - /admin/* - requires admin role (future)
+ * - /dashboard/* - requires barber authentication
+ * - /admin/* - requires admin role
+ * - /setup/* - admin-only (create new shop from admin dashboard)
  * 
  * Public routes:
- * - /login, /signup - redirects to dashboard if already authenticated
- * - /book/* - public booking pages for customers
+ * - /login - barber login
+ * - /admin/login - admin login
+ * - /book/* - public booking pages
  */
 export async function middleware(request: NextRequest) {
     let response = NextResponse.next({
@@ -29,7 +35,6 @@ export async function middleware(request: NextRequest) {
                     return cookie?.value
                 },
                 set(name: string, value: string, options: CookieOptions) {
-                    // Write cookies to the response (middleware cannot mutate the request cookies)
                     response.cookies.set(name, value, options)
                 },
                 remove(name: string, options: CookieOptions) {
@@ -39,41 +44,57 @@ export async function middleware(request: NextRequest) {
         }
     )
 
-    // Refresh session if expired
-    const { data: { user } } = await supabase.auth.getUser()
+    // Get barber session from Supabase
+    const { data: { user: barberUser } } = await supabase.auth.getUser()
 
     const { pathname } = request.nextUrl
 
-    // Protect dashboard and setup routes - require authentication
-    if (pathname.startsWith('/dashboard') || pathname.startsWith('/setup')) {
-        if (!user) {
+    // Check if barber user is also an admin
+    let isAdmin = false
+    if (barberUser) {
+        const { data: adminMembership, error: adminCheckError } = await supabase
+            .from('admin_users')
+            .select('user_id')
+            .eq('user_id', barberUser.id)
+            .maybeSingle()
+
+        isAdmin = !!adminMembership && !adminCheckError
+    }
+
+    // BARBER ROUTE PROTECTION
+    if (pathname.startsWith('/dashboard') || pathname.startsWith('/barber')) {
+        // Prevent admin users from accessing barber routes
+        if (isAdmin) {
+            return NextResponse.redirect(new URL('/admin/dashboard', request.url))
+        }
+        // Require barber authentication
+        if (!barberUser) {
             const redirectUrl = new URL('/login', request.url)
             redirectUrl.searchParams.set('redirect', pathname)
             return NextResponse.redirect(redirectUrl)
         }
     }
 
-    // Redirect authenticated users away from auth pages
-    if ((pathname === '/login' || pathname === '/signup') && user) {
+    // SETUP ROUTE PROTECTION - Admin only, never public
+    if (pathname.startsWith('/setup')) {
+        if (!barberUser || !isAdmin) {
+            return NextResponse.redirect(new URL('/admin/login', request.url))
+        }
+    }
+
+    // BARBER AUTH PAGES - Redirect authenticated barbers away
+    if ((pathname === '/login' || pathname === '/signup') && barberUser && !isAdmin) {
         return NextResponse.redirect(new URL('/dashboard', request.url))
     }
 
-    // Admin routes protection: enforce server-side admin membership
-    // Exception: /admin/login and /admin/setup-user are public (for initial access)
+    // ADMIN ROUTE PROTECTION
     if (pathname.startsWith('/admin') && pathname !== '/admin/login' && pathname !== '/admin/setup-user') {
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: response.headers })
+        if (!barberUser) {
+            return NextResponse.redirect(new URL('/admin/login', request.url))
         }
-
-        const { data: adminMembership, error: adminCheckError } = await supabase
-            .from('admin_users')
-            .select('user_id')
-            .eq('user_id', user.id)
-            .maybeSingle()
-
-        const isAdmin = !!adminMembership && !adminCheckError
         if (!isAdmin) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403, headers: response.headers })
+            // Barber trying to access admin routes - redirect to barber dashboard
+            return NextResponse.redirect(new URL('/dashboard', request.url))
         }
     }
 

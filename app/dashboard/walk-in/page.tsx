@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import WalkInForm from '@/components/booking/WalkInForm'
+import SetupPendingMessage from '@/components/dashboard/SetupPendingMessage'
 
 type Barber = {
     id: string
@@ -29,7 +30,7 @@ export default async function WalkInPage() {
 
     const shopId = (shop as { id: string } | null)?.id
     if (!shopId) {
-        redirect('/setup/shop')
+        return <SetupPendingMessage userEmail={user.email ?? ''} step="shop" />
     }
 
     const shopPhone = (shop as { phone?: string } | null)?.phone
