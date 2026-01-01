@@ -43,10 +43,11 @@ export default function AdminLoginPage() {
                 return
             }
 
-            // Store tokens in localStorage for client use
+            // Store tokens and email in localStorage for client use
             if (data.accessToken) {
                 localStorage.setItem('adminAccessToken', data.accessToken)
                 localStorage.setItem('adminRefreshToken', data.refreshToken || '')
+                localStorage.setItem('adminEmail', email)
             }
 
             // Wait for session to be fully established
@@ -63,52 +64,54 @@ export default function AdminLoginPage() {
     }
 
     return (
-        <div style={{ maxWidth: '400px', margin: '50px auto', fontFamily: 'sans-serif' }}>
-            <h1>Admin Login</h1>
-            <form onSubmit={handleSubmit}>
-                <div style={{ marginBottom: '15px' }}>
-                    <label htmlFor="email">Email:</label>
-                    <input
-                        id="email"
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        style={{ width: '100%', padding: '8px', marginTop: '5px', boxSizing: 'border-box' }}
-                    />
+        <div className="flex items-center justify-center min-h-screen bg-gray-50">
+            <div className="w-full max-w-md">
+                <div className="bg-white rounded-lg shadow-md p-8">
+                    <h1 className="text-2xl font-bold text-gray-900 mb-6">Admin Login</h1>
+                    <form onSubmit={handleSubmit}>
+                        <div className="mb-4">
+                            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                                Email
+                            </label>
+                            <input
+                                id="email"
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="admin@example.com"
+                            />
+                        </div>
+                        <div className="mb-6">
+                            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                                Password
+                            </label>
+                            <input
+                                id="password"
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="••••••••"
+                            />
+                        </div>
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                        >
+                            {loading ? 'Logging in...' : 'Login'}
+                        </button>
+                    </form>
+                    {error && (
+                        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm">
+                            {error}
+                        </div>
+                    )}
                 </div>
-                <div style={{ marginBottom: '15px' }}>
-                    <label htmlFor="password">Password:</label>
-                    <input
-                        id="password"
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        style={{ width: '100%', padding: '8px', marginTop: '5px', boxSizing: 'border-box' }}
-                    />
-                </div>
-                <button
-                    type="submit"
-                    disabled={loading}
-                    style={{ width: '100%', padding: '10px', cursor: 'pointer' }}
-                >
-                    {loading ? 'Logging in...' : 'Login'}
-                </button>
-            </form>
-            {error && (
-                <div
-                    style={{
-                        marginTop: '15px',
-                        padding: '10px',
-                        borderRadius: '4px',
-                        backgroundColor: '#f8d7da',
-                        color: '#721c24',
-                    }}
-                >
-                    {error}
-                </div>
-            )}
+            </div>
         </div>
     )
 }

@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from "@/lib/supabase";
+import { createServiceSupabaseClient } from "@/lib/supabase";
 
 export interface ShopBarber {
   id: string;
@@ -41,9 +41,10 @@ export interface ShopRelatedData {
 
 /**
  * Fetches related shop data for admin/shop details (read-only, limited size).
+ * Uses service role client to bypass RLS for admin access.
  */
 export async function getShopRelatedData(shopId: string): Promise<ShopRelatedData> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServiceSupabaseClient();
 
   // Barbers (max 2)
   const { data: barbers = [] } = await supabase
@@ -55,14 +56,18 @@ export async function getShopRelatedData(shopId: string): Promise<ShopRelatedDat
     .limit(2);
 
   // Services (max 10)
-  const { data: services = [] } = await supabase
+  const { data: services = [], error: servicesError } = await supabase
     .from("services")
     .select("id, name, duration_minutes, advance_amount")
     .eq("shop_id", shopId)
-    .eq("is_active", true)
     .is("deleted_at", null)
     .order("created_at", { ascending: true })
     .limit(10);
+
+  if (servicesError) {
+    console.error('Error fetching services for shop', shopId, ':', servicesError);
+  }
+  console.log('Services found for shop', shopId, ':', services?.length || 0);
 
   // Working hours (summary, max 7)
   const { data: workingHours = [] } = await supabase

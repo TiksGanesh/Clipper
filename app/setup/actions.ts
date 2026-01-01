@@ -4,6 +4,7 @@ import { requireAuth } from '@/lib/auth'
 import { createServerActionClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
 import type { Database } from '@/types/database'
+import { createTrialSubscription } from '@/lib/subscriptions'
 
 const days = [
     { key: 0, label: 'Sunday' },
@@ -52,18 +53,21 @@ export async function createShopAction(formData: FormData) {
 
     // If update succeeded (found and updated a row), we're done
     if (!updateError && updated && updated.length > 0) {
+        // Create trial subscription for updated shop
+        const shopId = (updated[0] as { id: string }).id
+        await createTrialSubscription(shopId)
         redirect('/setup/barbers')
     }
 
     // If update didn't find any rows (not an error, just nothing to update), try insert
     if (!updateError && (!updated || updated.length === 0)) {
         // @ts-expect-error - Supabase type inference issue
-        const { error: insertError } = await supabase.from('shops').insert({
+        const { data: inserted, error: insertError } = await supabase.from('shops').insert({
             owner_id: user.id,
             name,
             phone,
             address,
-        })
+        }).select('id').single()
 
         if (insertError) {
             // If insert fails due to duplicate, that's OK - means another request created it
@@ -75,6 +79,12 @@ export async function createShopAction(formData: FormData) {
                 ? `Database error: ${insertError.message} (Code: ${insertError.code})`
                 : 'Unable to create shop. Please try again.'
             redirect('/setup/shop?error=' + encodeURIComponent(errorMsg))
+        }
+
+        // Create trial subscription for new shop
+        const shopId = (inserted as { id: string } | null)?.id
+        if (shopId) {
+            await createTrialSubscription(shopId)
         }
 
         redirect('/setup/barbers')

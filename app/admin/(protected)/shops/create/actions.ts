@@ -3,6 +3,7 @@
 import { requireAdminContext } from '@/lib/auth'
 import { createServiceSupabaseClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
+import { createTrialSubscription } from '@/lib/subscriptions'
 
 const PHONE_DIGITS_MIN = 7
 const PHONE_DIGITS_MAX = 15
@@ -21,16 +22,22 @@ export async function createAdminShopAction(formData: FormData) {
         redirect(`${redirectPath}?error=${encodeURIComponent(message)}`)
     }
 
+    // Validate only allowed fields are present
+    const allowedFields = ['name', 'owner_email', 'owner_password', 'owner_phone']
+    const submittedFields = Array.from(formData.keys())
+    const unsupportedFields = submittedFields.filter(field => !allowedFields.includes(field))
+    
+    if (unsupportedFields.length > 0) {
+        await fail('Unsupported fields detected. Only shop name, owner email, owner password, and owner phone are allowed.')
+    }
+
     const name = (formData.get('name') as string)?.trim()
-    const phone = (formData.get('phone') as string)?.trim()
-    const address = ((formData.get('address') as string) || '').trim() || null
     const ownerEmail = (formData.get('owner_email') as string)?.trim()
     const ownerPassword = (formData.get('owner_password') as string)?.trim()
-    const barberName = (formData.get('barber_name') as string)?.trim()
-    const barberPhone = ((formData.get('barber_phone') as string) || '')?.trim() || null
+    const ownerPhone = ((formData.get('owner_phone') as string) || '')?.trim() || null
 
-    if (!name || !phone || !ownerEmail || !ownerPassword || !barberName) {
-        await fail('Shop, owner, and barber details are required')
+    if (!name || !ownerEmail || !ownerPassword) {
+        await fail('Shop name, owner email, and owner password are required')
     }
 
     if (!isValidEmail(ownerEmail)) {
@@ -41,14 +48,9 @@ export async function createAdminShopAction(formData: FormData) {
         await fail('Password must be at least 8 characters')
     }
 
-    const shopPhoneResult = validatePhone(phone, { label: 'shop phone', required: true })
-    if (!shopPhoneResult.ok) {
-        await fail(shopPhoneResult.message)
-    }
-
-    const barberPhoneResult = validatePhone(barberPhone, { label: 'barber phone', required: false })
-    if (!barberPhoneResult.ok) {
-        await fail(barberPhoneResult.message)
+    const ownerPhoneResult = validatePhone(ownerPhone, { label: 'owner phone', required: false })
+    if (!ownerPhoneResult.ok) {
+        await fail(ownerPhoneResult.message)
     }
 
     const { id: existingOwnerId, error: ownerLookupError } = await safeFindUserIdByEmail(supabase, ownerEmail)
@@ -150,8 +152,8 @@ export async function createAdminShopAction(formData: FormData) {
             .insert({
                 owner_id: resolvedOwnerId,
                 name,
-                phone: shopPhoneResult.normalized,
-                address,
+                phone: ownerPhoneResult.normalized,
+                address: null,
             })
             .select('id')
             .single()
@@ -199,7 +201,7 @@ export async function createAdminShopAction(formData: FormData) {
     if (existingShop && (!existingBarbers || existingBarbers.length === 0)) {
         const { error: updateError } = await supabase
             .from('shops')
-            .update({ name, phone: shopPhoneResult.normalized, address })
+            .update({ name, phone: ownerPhoneResult.normalized, address: null })
             .eq('id', shopId)
 
         if (updateError) {
@@ -207,29 +209,12 @@ export async function createAdminShopAction(formData: FormData) {
         }
     }
 
-    const duplicateBarber = (existingBarbers || []).some((barber) => matchesBarber(barber, barberName, barberPhoneResult.normalized))
-    if (duplicateBarber) {
-        redirect(`/admin/shops/${shopId}`)
+    // Create trial subscription for the shop
+    if (shopId) {
+        await createTrialSubscription(shopId)
     }
 
-    if ((existingBarbers?.length || 0) >= 2) {
-        await fail('Shop already has the maximum number of barbers.')
-    }
-
-    const { error: barberError } = await supabase
-        .from('barbers')
-        .insert({
-            shop_id: shopId,
-            name: barberName,
-            phone: barberPhoneResult.normalized,
-            is_active: true,
-        })
-
-    if (barberError) {
-        await fail('Shop created, but adding the barber failed. Please retry.')
-    }
-
-    redirect(`/admin/shops/${shopId}`)
+    redirect(`/admin/shops/${shopId}?success=${encodeURIComponent('Shop created successfully')}`)
 }
 
 async function safeFindUserIdByEmail(supabase: ReturnType<typeof createServiceSupabaseClient>, email: string) {
