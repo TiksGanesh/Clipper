@@ -1,6 +1,6 @@
 'use server'
 
-import { requireAdmin } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth'
 import { createServerActionClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
 import type { Database } from '@/types/database'
@@ -16,8 +16,18 @@ const days = [
 ]
 
 export async function createShopAction(formData: FormData) {
-    const user = await requireAdmin()
+    const user = await requireAuth()
     const supabase = await createServerActionClient()
+
+    const { data: adminMembership } = await supabase
+        .from('admin_users')
+        .select('user_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+    if (adminMembership) {
+        redirect('/admin/dashboard')
+    }
 
     const name = (formData.get('name') as string)?.trim()
     const phone = (formData.get('phone') as string)?.trim()
@@ -82,8 +92,18 @@ export async function createShopAction(formData: FormData) {
 }
 
 export async function saveBarbersAction(formData: FormData) {
-    const user = await requireAdmin()
+    const user = await requireAuth()
     const supabase = await createServerActionClient()
+
+    const { data: adminMembership } = await supabase
+        .from('admin_users')
+        .select('user_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+    if (adminMembership) {
+        redirect('/admin/dashboard')
+    }
 
     // Get shop_id for this user
     const { data: shop } = await supabase
@@ -115,6 +135,16 @@ export async function saveBarbersAction(formData: FormData) {
         throw new Error('Maximum 2 barbers allowed')
     }
 
+    // Delete existing barbers for idempotency (handles admin-seeded shops and re-runs)
+    const { error: deleteError } = await supabase
+        .from('barbers')
+        .delete()
+        .eq('shop_id', shop.id)
+
+    if (deleteError) {
+        throw new Error(`Failed to clear existing barbers: ${deleteError.message}`)
+    }
+
     const rows = names.map((name, idx) => ({
         shop_id: shop.id,
         name,
@@ -123,17 +153,27 @@ export async function saveBarbersAction(formData: FormData) {
     }))
 
     // @ts-expect-error - Supabase type inference issue
-    const { error } = await supabase.from('barbers').insert(rows)
-    if (error) {
-        throw new Error(error.message)
+    const { error: insertError } = await supabase.from('barbers').insert(rows)
+    if (insertError) {
+        throw new Error(insertError.message)
     }
 
     redirect('/setup/hours')
 }
 
 export async function saveHoursAction(formData: FormData) {
-    const user = await requireAdmin()
+    const user = await requireAuth()
     const supabase = await createServerActionClient()
+
+    const { data: adminMembership } = await supabase
+        .from('admin_users')
+        .select('user_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+    if (adminMembership) {
+        redirect('/admin/dashboard')
+    }
 
     const { data: shop } = await supabase
         .from('shops')
@@ -173,8 +213,18 @@ export async function saveHoursAction(formData: FormData) {
 }
 
 export async function saveServicesAction(formData: FormData) {
-    const user = await requireAdmin()
+    const user = await requireAuth()
     const supabase = await createServerActionClient()
+
+    const { data: adminMembership } = await supabase
+        .from('admin_users')
+        .select('user_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+    if (adminMembership) {
+        redirect('/admin/dashboard')
+    }
 
     const { data: shop } = await supabase
         .from('shops')

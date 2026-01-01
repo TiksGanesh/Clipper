@@ -2,11 +2,13 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { saveShopClosureAction, saveShopNameAction, saveWorkingHoursAction, saveBarberDetailsAction } from '@/app/dashboard/edit-shop/actions'
+import { saveShopClosureAction, saveShopNameAction, saveWorkingHoursAction, saveBarberDetailsAction, saveShopContactAction, addBarberAction } from '@/app/dashboard/edit-shop/actions'
 
 type Shop = {
     id: string
     name: string
+    phone: string
+    address: string | null
 }
 
 type Barber = {
@@ -34,6 +36,8 @@ const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'S
 
 export default function EditShopInformation({ shop, barbers, workingHours, userEmail }: Props) {
     const [shopName, setShopName] = useState(shop.name)
+    const [shopPhone, setShopPhone] = useState(shop.phone)
+    const [shopAddress, setShopAddress] = useState(shop.address || '')
     const [hours, setHours] = useState<WorkingHours>(workingHours)
     const [barberData, setBarberData] = useState<Barber[]>(barbers)
     const [isSaving, setIsSaving] = useState(false)
@@ -43,6 +47,10 @@ export default function EditShopInformation({ shop, barbers, workingHours, userE
     const [closureReason, setClosureReason] = useState('')
     const [saveError, setSaveError] = useState('')
     const [saveSuccess, setSaveSuccess] = useState(false)
+    const [isAddingBarber, setIsAddingBarber] = useState(false)
+    const [newBarberName, setNewBarberName] = useState('')
+    const [newBarberPhone, setNewBarberPhone] = useState('')
+    const [addBarberError, setAddBarberError] = useState('')
 
     const handleBarberNameChange = (id: string, name: string) => {
         setBarberData((prev) => prev.map((b) => (b.id === id ? { ...b, name } : b)))
@@ -68,6 +76,14 @@ export default function EditShopInformation({ shop, barbers, workingHours, userE
         setSaveSuccess(false)
 
         try {
+            // Save shop contact (phone and address)
+            const contactResult = await saveShopContactAction(shopPhone, shopAddress)
+            if (!contactResult.success) {
+                setSaveError(contactResult.error || 'Failed to save shop contact')
+                setIsSaving(false)
+                return
+            }
+
             // Save shop name
             const nameResult = await saveShopNameAction(shopName)
             if (!nameResult.success) {
@@ -84,7 +100,7 @@ export default function EditShopInformation({ shop, barbers, workingHours, userE
                 return
             }
 
-            // Save barber details
+            // Save barber details (only existing barbers)
             const barberResult = await saveBarberDetailsAction(barberData)
             if (!barberResult.success) {
                 setSaveError(barberResult.error || 'Failed to save barber details')
@@ -106,6 +122,38 @@ export default function EditShopInformation({ shop, barbers, workingHours, userE
             setSaveError(error instanceof Error ? error.message : 'An error occurred while saving')
         } finally {
             setIsSaving(false)
+        }
+    }
+
+    const handleAddBarber = async () => {
+        setAddBarberError('')
+
+        if (!newBarberName.trim()) {
+            setAddBarberError('Barber name is required')
+            return
+        }
+
+        setIsAddingBarber(true)
+
+        try {
+            const result = await addBarberAction(newBarberName, newBarberPhone || null)
+
+            if (!result.success) {
+                setAddBarberError(result.error || 'Failed to add barber')
+                setIsAddingBarber(false)
+                return
+            }
+
+            // Reset form and reload page
+            setNewBarberName('')
+            setNewBarberPhone('')
+            setSaveSuccess(true)
+            setTimeout(() => {
+                window.location.reload()
+            }, 500)
+        } catch (error) {
+            setAddBarberError(error instanceof Error ? error.message : 'An error occurred while adding barber')
+            setIsAddingBarber(false)
         }
     }
 
@@ -167,6 +215,29 @@ export default function EditShopInformation({ shop, barbers, workingHours, userE
                             onChange={(e) => setShopName(e.target.value)}
                             placeholder="Enter your shop name"
                             required
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        />
+                    </label>
+
+                    <label className="block">
+                        <span className="text-sm font-medium text-gray-800 mb-2 block">Phone *</span>
+                        <input
+                            type="tel"
+                            value={shopPhone}
+                            onChange={(e) => setShopPhone(e.target.value)}
+                            placeholder="Enter shop phone number (7-15 digits)"
+                            required
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        />
+                    </label>
+
+                    <label className="block">
+                        <span className="text-sm font-medium text-gray-800 mb-2 block">Address (optional)</span>
+                        <textarea
+                            value={shopAddress}
+                            onChange={(e) => setShopAddress(e.target.value)}
+                            placeholder="Enter your shop address"
+                            rows={3}
                             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                         />
                     </label>
@@ -276,7 +347,7 @@ export default function EditShopInformation({ shop, barbers, workingHours, userE
                 <section className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 md:p-6 space-y-4">
                     <div>
                         <h2 className="text-lg font-semibold text-gray-900">Barbers</h2>
-                        <p className="text-sm text-gray-600 mt-1">Update barber details shown to customers.</p>
+                        <p className="text-sm text-gray-600 mt-1">Update barber details shown to customers. Maximum 2 barbers allowed.</p>
                     </div>
 
                     <div className="space-y-4">
@@ -307,6 +378,54 @@ export default function EditShopInformation({ shop, barbers, workingHours, userE
                                 </div>
                             </div>
                         ))}
+
+                        {/* Add Barber Section */}
+                        {barberData.length < 2 && (
+                            <div className="border-t border-gray-200 pt-4 mt-4 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-sm font-medium text-gray-800">Add Second Barber</h3>
+                                    <span className="text-xs text-gray-500">{barberData.length} of 2 barbers</span>
+                                </div>
+
+                                {addBarberError && (
+                                    <div className="bg-red-50 border border-red-200 text-red-800 text-sm rounded-lg px-3 py-2">
+                                        {addBarberError}
+                                    </div>
+                                )}
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <label className="block">
+                                        <span className="text-xs font-medium text-gray-700 mb-1 block">Name *</span>
+                                        <input
+                                            type="text"
+                                            value={newBarberName}
+                                            onChange={(e) => setNewBarberName(e.target.value)}
+                                            placeholder="Enter barber name"
+                                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                        />
+                                    </label>
+                                    <label className="block">
+                                        <span className="text-xs font-medium text-gray-700 mb-1 block">Phone (optional)</span>
+                                        <input
+                                            type="tel"
+                                            value={newBarberPhone}
+                                            onChange={(e) => setNewBarberPhone(e.target.value)}
+                                            placeholder="Enter phone number"
+                                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                        />
+                                    </label>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={handleAddBarber}
+                                    disabled={isAddingBarber}
+                                    className="w-full inline-flex justify-center items-center px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                                >
+                                    {isAddingBarber ? 'Adding...' : '+ Add Barber'}
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </section>
 

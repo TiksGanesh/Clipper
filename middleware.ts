@@ -11,7 +11,7 @@ import { NextResponse, type NextRequest } from 'next/server'
  * Protected routes:
  * - /dashboard/* - requires barber authentication
  * - /admin/* - requires admin role
- * - /setup/* - admin-only (create new shop from admin dashboard)
+ * - /setup/* - barber owners only (admin users are redirected away)
  * 
  * Public routes:
  * - /login - barber login
@@ -75,10 +75,16 @@ export async function middleware(request: NextRequest) {
         }
     }
 
-    // SETUP ROUTE PROTECTION - Admin only, never public
+    // SETUP ROUTE PROTECTION - Barber owners only
     if (pathname.startsWith('/setup')) {
-        if (!barberUser || !isAdmin) {
-            return NextResponse.redirect(new URL('/admin/login', request.url))
+        if (!barberUser) {
+            const redirectUrl = new URL('/login', request.url)
+            redirectUrl.searchParams.set('redirect', pathname)
+            return NextResponse.redirect(redirectUrl)
+        }
+
+        if (isAdmin) {
+            return NextResponse.redirect(new URL('/admin/dashboard', request.url))
         }
     }
 

@@ -1,12 +1,18 @@
-import { requireAdmin } from '@/lib/auth'
+import { requireAuth, isAdmin } from '@/lib/auth'
 import { createShopAction } from '@/app/setup/actions'
+import { redirect } from 'next/navigation'
 
 export default async function SetupShopPage({
     searchParams,
 }: {
     searchParams: { error?: string }
 }) {
-    await requireAdmin()
+    await requireAuth()
+    const admin = await isAdmin()
+
+    if (admin) {
+        redirect('/admin/dashboard')
+    }
 
     return (
         <div className="max-w-lg mx-auto py-10">

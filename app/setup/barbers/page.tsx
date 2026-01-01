@@ -1,12 +1,22 @@
-import { requireAdmin } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
 import { saveBarbersAction } from '@/app/setup/actions'
 import type { Database } from '@/types/database'
 
 export default async function SetupBarbersPage() {
-    const user = await requireAdmin()
+    const user = await requireAuth()
     const supabase = await createServerSupabaseClient()
+
+    const { data: adminMembership } = await supabase
+        .from('admin_users')
+        .select('user_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+    if (adminMembership) {
+        redirect('/admin/dashboard')
+    }
 
     type ShopId = Pick<Database['public']['Tables']['shops']['Row'], 'id'>
 

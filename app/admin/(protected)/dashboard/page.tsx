@@ -6,7 +6,7 @@ import { getShopAdminDashboardCounts, getLatestSetupPendingShops } from '@/lib/a
 
 export default async function AdminDashboardPage() {
     const user = await requireAuth()
-    let counts = null
+    let counts: { total: number; active: number; trial: number; suspended: number; expired: number; setup_pending: number } | null = null
     let setupPending = null
     let errorMsg = ''
     try {
@@ -65,32 +65,32 @@ export default async function AdminDashboardPage() {
                     <a href="/admin/shops" style={{ textDecoration: 'none' }}>
                         <div style={{ border: '1px solid #ccc', borderRadius: 8, padding: 16, minWidth: 120, textAlign: 'center' }}>
                             <div>Total Shops</div>
-                            <div style={{ fontSize: 24, fontWeight: 'bold' }}>{counts.total}</div>
+                            <div style={{ fontSize: 24, fontWeight: 'bold' }}>{counts?.total ?? 0}</div>
                         </div>
                     </a>
                     <a href="/admin/shops?status=active" style={{ textDecoration: 'none' }}>
                         <div style={{ border: '1px solid #ccc', borderRadius: 8, padding: 16, minWidth: 120, textAlign: 'center' }}>
                             <div>Active Shops</div>
-                            <div style={{ fontSize: 24, fontWeight: 'bold' }}>{counts.active}</div>
+                            <div style={{ fontSize: 24, fontWeight: 'bold' }}>{counts?.active ?? 0}</div>
                         </div>
                     </a>
                     <a href="/admin/shops?status=trial" style={{ textDecoration: 'none' }}>
                         <div style={{ border: '1px solid #ccc', borderRadius: 8, padding: 16, minWidth: 120, textAlign: 'center' }}>
                             <div>Trial Shops</div>
-                            <div style={{ fontSize: 24, fontWeight: 'bold' }}>{counts.trial}</div>
+                            <div style={{ fontSize: 24, fontWeight: 'bold' }}>{counts?.trial ?? 0}</div>
                         </div>
                     </a>
                     <a href="/admin/shops?status=suspended" style={{ textDecoration: 'none' }}>
                         <div style={{ border: '1px solid #ccc', borderRadius: 8, padding: 16, minWidth: 120, textAlign: 'center' }}>
                             <div>Suspended / Expired</div>
-                            <div style={{ fontSize: 24, fontWeight: 'bold' }}>{counts.suspended + counts.expired}</div>
+                            <div style={{ fontSize: 24, fontWeight: 'bold' }}>{(counts?.suspended ?? 0) + (counts?.expired ?? 0)}</div>
                         </div>
                     </a>
                 </div>
             </section>
             <section>
                 <h2>Setup Pending Shops</h2>
-                {setupPending.length === 0 ? (
+                {setupPending?.length === 0 ? (
                     <p>No shops pending setup</p>
                 ) : (
                     <table>
@@ -103,7 +103,7 @@ export default async function AdminDashboardPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {setupPending.map((shop) => (
+                            {(setupPending ?? []).map((shop) => (
                                 <tr key={shop.shop_id}>
                                     <td>{shop.shop_name}</td>
                                     <td>{shop.owner_email || shop.owner_phone || '-'}</td>

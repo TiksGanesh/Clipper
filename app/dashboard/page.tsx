@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import DayView from '@/components/calendar/DayView'
 import DashboardContent from './dashboard-content'
 import { getBarberLeaveStatuses } from '@/lib/barber-leave'
-import SetupPendingMessage from '@/components/dashboard/SetupPendingMessage'
+import { getShopSetupStatus } from '@/lib/shop-setup-status'
 
 type Barber = {
     id: string
@@ -17,6 +17,15 @@ type Service = {
     name: string
     duration_minutes: number
     price: number
+}
+
+const normalizeCount = (value: number | null | undefined) => value ?? 0
+
+const getNextSetupPath = (counts: { barbers: number; hours: number; services: number }) => {
+    if (counts.barbers < 1) return '/setup/barbers'
+    if (counts.hours < 1) return '/setup/hours'
+    if (counts.services < 1) return '/setup/services'
+    return null
 }
 
 export default async function DashboardPage() {
@@ -33,39 +42,46 @@ export default async function DashboardPage() {
 
     const shopId = (shop as { id: string } | null)?.id
     if (!shopId) {
-        return <SetupPendingMessage userEmail={user.email ?? ''} step="shop" />
+        redirect('/setup/shop')
+    }
+    const activeShopId = shopId as string
+
+    const [{ count: barberCount }, { count: servicesCount }, { count: hoursCount }] = await Promise.all([
+        supabase.from('barbers').select('id', { count: 'exact', head: true }).eq('shop_id', activeShopId).is('deleted_at', null),
+        supabase.from('services').select('id', { count: 'exact', head: true }).eq('shop_id', activeShopId).is('deleted_at', null),
+        supabase.from('working_hours').select('id', { count: 'exact', head: true }).eq('shop_id', activeShopId),
+    ])
+
+    const nextSetupPath = getNextSetupPath({
+        barbers: normalizeCount(barberCount),
+        hours: normalizeCount(hoursCount),
+        services: normalizeCount(servicesCount),
+    })
+
+    if (nextSetupPath) {
+        redirect(nextSetupPath)
     }
 
-    const [{ count: barberCount }, { count: servicesCount }, { count: hoursCount }, { data: barbers }, { data: services }] = await Promise.all([
-        supabase.from('barbers').select('id', { count: 'exact', head: true }).eq('shop_id', shopId).is('deleted_at', null),
-        supabase.from('services').select('id', { count: 'exact', head: true }).eq('shop_id', shopId).is('deleted_at', null),
-        supabase.from('working_hours').select('id', { count: 'exact', head: true }).eq('shop_id', shopId),
+    const [{ data: barbers }, { data: services }, leaveStatuses] = await Promise.all([
         supabase
             .from('barbers')
             .select('id, name')
-            .eq('shop_id', shopId)
+            .eq('shop_id', activeShopId)
             .is('deleted_at', null)
             .order('name'),
         supabase
             .from('services')
             .select('id, name, duration_minutes, price')
-            .eq('shop_id', shopId)
+            .eq('shop_id', activeShopId)
             .is('deleted_at', null)
             .order('name'),
+        getBarberLeaveStatuses(activeShopId),
     ])
 
-    if (!barberCount || barberCount < 1) {
-        return <SetupPendingMessage userEmail={user.email ?? ''} step="barbers" />
-    }
-    if (!hoursCount || hoursCount < 1) {
-        return <SetupPendingMessage userEmail={user.email ?? ''} step="hours" />
-    }
-    if (!servicesCount || servicesCount < 1) {
-        return <SetupPendingMessage userEmail={user.email ?? ''} step="services" />
-    }
+    // Get detailed setup status for dashboard hints
+    const setupStatus = await getShopSetupStatus(activeShopId)
 
     // Fetch barber leave statuses for today
-    const leaveStatuses = await getBarberLeaveStatuses(shopId)
     const barbersWithLeaveStatus = (barbers as Barber[]).map((b) => ({
         ...b,
         isOnLeave: leaveStatuses[b.id] || false,
@@ -100,7 +116,12 @@ export default async function DashboardPage() {
             <main className="max-w-7xl mx-auto px-0 md:px-4 lg:px-6 py-4 md:py-6">
                 {/* Mobile Quick Actions */}
                 <div className="lg:hidden px-4 md:px-0 mb-4">
-                    <DashboardContent barbers={barbersWithLeaveStatus} />
+                    <DashboardContent 
+                        barbers={barbersWithLeaveStatus} 
+                        setupStatus={setupStatus}
+                        barberCount={(barbers as Barber[])?.length ?? 0}
+                        serviceCount={(services as Service[])?.length ?? 0}
+                    />
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6">
@@ -116,7 +137,12 @@ export default async function DashboardPage() {
 
                     {/* Sidebar Navigation - Hidden on mobile, visible on desktop */}
                     <div className="hidden lg:block lg:col-span-1">
-                        <DashboardContent barbers={barbersWithLeaveStatus} />
+                        <DashboardContent 
+                            barbers={barbersWithLeaveStatus} 
+                            setupStatus={setupStatus}
+                            barberCount={(barbers as Barber[])?.length ?? 0}
+                            serviceCount={(services as Service[])?.length ?? 0}
+                        />
                     </div>
                 </div>
             </main>

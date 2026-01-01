@@ -4,6 +4,32 @@ import { createServerSupabaseClient } from '@/lib/supabase'
 import { requireAuth } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
+// Phone validation constants (matches admin flow)
+const PHONE_DIGITS_MIN = 7
+const PHONE_DIGITS_MAX = 15
+
+function validatePhone(value: string | null, opts: { label: string; required: boolean }): { ok: boolean; message?: string; normalized: string | null } {
+    if (!value || value.length === 0) {
+        if (opts.required) {
+            return { ok: false, message: `Enter a valid ${opts.label}`, normalized: null }
+        }
+        return { ok: true, normalized: null }
+    }
+
+    const trimmed = value.trim()
+    const digitsOnly = trimmed.replace(/\D/g, '')
+
+    if (digitsOnly.length < PHONE_DIGITS_MIN || digitsOnly.length > PHONE_DIGITS_MAX) {
+        return { ok: false, message: `Enter a valid ${opts.label} (${PHONE_DIGITS_MIN}-${PHONE_DIGITS_MAX} digits).`, normalized: null }
+    }
+
+    if (trimmed.length > 20) {
+        return { ok: false, message: `${opts.label} must be 20 characters or fewer.`, normalized: null }
+    }
+
+    return { ok: true, normalized: trimmed }
+}
+
 export async function saveShopClosureAction(
     closedFrom: string,
     closedTo: string,
@@ -276,6 +302,148 @@ export async function saveBarberDetailsAction(barbers: Array<{ id: string; name:
                 success: false,
                 error: `Failed to update barber details`,
             }
+        }
+    }
+
+    revalidatePath('/dashboard/edit-shop')
+    return {
+        success: true,
+    }
+}
+
+export async function saveShopContactAction(phone: string | null, address: string | null) {
+    const user = await requireAuth()
+    const supabase = await createServerSupabaseClient()
+
+    // Get shop
+    const { data: shop, error: shopError } = await supabase
+        .from('shops')
+        .select('id')
+        .eq('owner_id', user.id)
+        .is('deleted_at', null)
+        .maybeSingle()
+
+    if (shopError || !shop) {
+        return {
+            success: false,
+            error: 'Shop not found',
+        }
+    }
+
+    // Validate phone (required for shop)
+    const phoneResult = validatePhone(phone, { label: 'shop phone', required: true })
+    if (!phoneResult.ok) {
+        return {
+            success: false,
+            error: phoneResult.message || 'Invalid phone',
+        }
+    }
+
+    // Validate address (optional, trim if provided)
+    const normalizedAddress = address && address.trim().length > 0 ? address.trim() : null
+
+    // Update shop contact info
+    const { error: updateError } = await supabase
+        .from('shops')
+        .update({
+            phone: phoneResult.normalized,
+            address: normalizedAddress,
+        })
+        .eq('id', shop.id)
+
+    if (updateError) {
+        console.error('Error updating shop contact:', updateError)
+        return {
+            success: false,
+            error: 'Failed to update shop contact',
+        }
+    }
+
+    revalidatePath('/dashboard/edit-shop')
+    return {
+        success: true,
+    }
+}
+
+export async function addBarberAction(name: string, phone: string | null) {
+    const user = await requireAuth()
+    const supabase = await createServerSupabaseClient()
+
+    // Get shop
+    const { data: shop, error: shopError } = await supabase
+        .from('shops')
+        .select('id')
+        .eq('owner_id', user.id)
+        .is('deleted_at', null)
+        .maybeSingle()
+
+    if (shopError || !shop) {
+        return {
+            success: false,
+            error: 'Shop not found',
+        }
+    }
+
+    // Validate barber name
+    if (!name?.trim()) {
+        return {
+            success: false,
+            error: 'Barber name is required',
+        }
+    }
+
+    // Validate phone (optional for barbers)
+    const phoneResult = validatePhone(phone, { label: 'barber phone', required: false })
+    if (!phoneResult.ok) {
+        return {
+            success: false,
+            error: phoneResult.message || 'Invalid phone',
+        }
+    }
+
+    // Server-side check: Ensure shop has less than 2 active barbers
+    const { data: existingBarbers, error: countError } = await supabase
+        .from('barbers')
+        .select('id')
+        .eq('shop_id', shop.id)
+        .eq('is_active', true)
+        .is('deleted_at', null)
+
+    if (countError) {
+        console.error('Error counting barbers:', countError)
+        return {
+            success: false,
+            error: 'Failed to check existing barbers',
+        }
+    }
+
+    if (existingBarbers && existingBarbers.length >= 2) {
+        return {
+            success: false,
+            error: 'You can only have a maximum of 2 active barbers per shop',
+        }
+    }
+
+    // Insert new barber
+    const { error: insertError } = await supabase.from('barbers').insert({
+        shop_id: shop.id,
+        name: name.trim(),
+        phone: phoneResult.normalized,
+        is_active: true,
+    })
+
+    if (insertError) {
+        console.error('Error creating barber:', insertError)
+        // Check if error is about max barbers constraint
+        if (insertError.message?.includes('Maximum 2 active barbers')) {
+            return {
+                success: false,
+                error: 'You can only have a maximum of 2 active barbers per shop',
+            }
+        }
+        return {
+            success: false,
+            error: 'Failed to create barber',
         }
     }
 
