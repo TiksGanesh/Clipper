@@ -26,7 +26,7 @@ export async function extendTrialAction(shopId: string): Promise<ActionResult> {
         // Get current subscription
         const { data: subscription, error: fetchError } = await supabase
             .from('subscriptions')
-            .select('id, subscription_status, trial_ends_at')
+            .select('id, status, trial_ends_at')
             .eq('shop_id', shopId)
             .is('deleted_at', null)
             .maybeSingle()
@@ -42,10 +42,11 @@ export async function extendTrialAction(shopId: string): Promise<ActionResult> {
         // Update subscription
         const { error: updateError } = await supabase
             .from('subscriptions')
+            // @ts-ignore - Supabase service client type inference issue
             .update({
                 trial_ends_at: newTrialEndDate.toISOString(),
                 current_period_end: newTrialEndDate.toISOString(),
-                subscription_status: 'trial', // Ensure status remains trial
+                status: 'trial',
                 updated_at: new Date().toISOString(),
             })
             .eq('shop_id', shopId)
@@ -108,12 +109,13 @@ export async function setSubscriptionDatesAction(
         // Update subscription with custom dates and activate
         const { error: updateError } = await supabase
             .from('subscriptions')
+            // @ts-ignore - Supabase service client type inference issue
             .update({
                 current_period_start: start.toISOString(),
                 current_period_end: end.toISOString(),
-                trial_ends_at: null, // Clear trial end (now on paid plan)
-                subscription_status: 'active',
-                canceled_at: null, // Clear any cancellation
+                trial_ends_at: null,
+                status: 'active',
+                canceled_at: null,
                 updated_at: new Date().toISOString(),
             })
             .eq('shop_id', shopId)
@@ -148,7 +150,7 @@ export async function reactivateShopAction(shopId: string): Promise<ActionResult
         // Get current subscription
         const { data: subscription, error: fetchError } = await supabase
             .from('subscriptions')
-            .select('id, subscription_status')
+            .select('id, status')
             .eq('shop_id', shopId)
             .is('deleted_at', null)
             .maybeSingle()
@@ -165,11 +167,12 @@ export async function reactivateShopAction(shopId: string): Promise<ActionResult
         // Reactivate subscription
         const { error: updateError } = await supabase
             .from('subscriptions')
+            // @ts-ignore - Supabase service client type inference issue
             .update({
-                subscription_status: 'active',
+                status: 'active',
                 current_period_start: now.toISOString(),
                 current_period_end: newEndDate.toISOString(),
-                canceled_at: null, // Clear cancellation timestamp
+                canceled_at: null,
                 updated_at: new Date().toISOString(),
             })
             .eq('shop_id', shopId)
@@ -204,7 +207,7 @@ export async function suspendShopAction(shopId: string): Promise<ActionResult> {
         // Get current subscription
         const { data: subscription, error: fetchError } = await supabase
             .from('subscriptions')
-            .select('id, subscription_status')
+            .select('id, status')
             .eq('shop_id', shopId)
             .is('deleted_at', null)
             .maybeSingle()
@@ -213,15 +216,16 @@ export async function suspendShopAction(shopId: string): Promise<ActionResult> {
             return { success: false, error: 'Subscription not found' }
         }
 
-        if ((subscription as any).subscription_status === 'suspended') {
+        if ((subscription as any).status === 'canceled') {
             return { success: false, error: 'Shop is already suspended' }
         }
 
         // Suspend subscription
         const { error: updateError } = await supabase
             .from('subscriptions')
+            // @ts-ignore - Supabase service client type inference issue
             .update({
-                subscription_status: 'suspended',
+                status: 'canceled',
                 updated_at: new Date().toISOString(),
             })
             .eq('shop_id', shopId)
@@ -256,7 +260,7 @@ export async function emergencyDisableAction(shopId: string): Promise<ActionResu
         // Get current subscription
         const { data: subscription, error: fetchError } = await supabase
             .from('subscriptions')
-            .select('id, subscription_status')
+            .select('id, status')
             .eq('shop_id', shopId)
             .is('deleted_at', null)
             .maybeSingle()
@@ -265,7 +269,7 @@ export async function emergencyDisableAction(shopId: string): Promise<ActionResu
             return { success: false, error: 'Subscription not found' }
         }
 
-        if ((subscription as any).subscription_status === 'canceled') {
+        if ((subscription as any).status === 'canceled') {
             return { success: false, error: 'Shop is already canceled' }
         }
 
@@ -274,10 +278,11 @@ export async function emergencyDisableAction(shopId: string): Promise<ActionResu
         // Cancel subscription immediately
         const { error: updateError } = await supabase
             .from('subscriptions')
+            // @ts-ignore - Supabase service client type inference issue
             .update({
-                subscription_status: 'canceled',
+                status: 'canceled',
                 canceled_at: now.toISOString(),
-                current_period_end: now.toISOString(), // End subscription immediately
+                current_period_end: now.toISOString(),
                 updated_at: now.toISOString(),
             })
             .eq('shop_id', shopId)

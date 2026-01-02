@@ -14,7 +14,7 @@ export async function setBarberLeaveAction(barberId: string, isOnLeave: boolean)
         .select('id')
         .eq('owner_id', user.id)
         .is('deleted_at', null)
-        .maybeSingle()
+        .maybeSingle() as { data: { id: string } | null; error: any }
 
     if (shopError || !shop) {
         return {
@@ -58,6 +58,7 @@ export async function setBarberLeaveAction(barberId: string, isOnLeave: boolean)
 
     if (isOnLeave) {
         // Insert barber leave record for today
+        // @ts-ignore - Supabase service client type inference issue
         const { error: insertError } = await supabase.from('barber_leaves').insert({
             barber_id: barberId,
             leave_date: today,

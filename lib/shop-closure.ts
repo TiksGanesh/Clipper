@@ -8,7 +8,7 @@ export async function getShopClosure(shopId: string) {
         .select('closed_from, closed_to')
         .eq('shop_id', shopId)
         .is('deleted_at', null)
-        .maybeSingle()
+        .maybeSingle() as { data: { closed_from: string; closed_to: string } | null; error: any }
 
     if (error || !closure) {
         return null

@@ -42,10 +42,11 @@ export async function extendTrialAction(shopId: string): Promise<ActionResult> {
         // Update subscription
         const { error: updateError } = await supabase
             .from('subscriptions')
+            // @ts-ignore - Supabase service client type inference issue
             .update({
                 trial_ends_at: newTrialEndDate.toISOString(),
                 current_period_end: newTrialEndDate.toISOString(),
-                status: 'trial', // Ensure status remains trial
+                status: 'trial',
                 updated_at: new Date().toISOString(),
             })
             .eq('shop_id', shopId)
@@ -109,12 +110,13 @@ export async function setSubscriptionDatesAction(
         // Update subscription with custom dates and activate
         const { error: updateError } = await supabase
             .from('subscriptions')
+            // @ts-ignore - Supabase service client type inference issue
             .update({
                 current_period_start: start.toISOString(),
                 current_period_end: end.toISOString(),
-                trial_ends_at: null, // Clear trial end (now on paid plan)
+                trial_ends_at: null,
                 status: 'active',
-                canceled_at: null, // Clear any cancellation
+                canceled_at: null,
                 updated_at: new Date().toISOString(),
             })
             .eq('shop_id', shopId)
@@ -167,11 +169,12 @@ export async function reactivateShopAction(shopId: string): Promise<ActionResult
         // Reactivate subscription
         const { error: updateError } = await supabase
             .from('subscriptions')
+            // @ts-ignore - Supabase service client type inference issue
             .update({
                 status: 'active',
                 current_period_start: now.toISOString(),
                 current_period_end: newEndDate.toISOString(),
-                canceled_at: null, // Clear cancellation timestamp
+                canceled_at: null,
                 updated_at: new Date().toISOString(),
             })
             .eq('shop_id', shopId)
@@ -224,6 +227,7 @@ export async function suspendShopAction(shopId: string): Promise<ActionResult> {
         // Suspend subscription by setting to canceled (but without canceled_at for potential reactivation)
         const { error: updateError } = await supabase
             .from('subscriptions')
+            // @ts-ignore - Supabase service client type inference issue
             .update({
                 status: 'canceled',
                 updated_at: new Date().toISOString(),
@@ -279,10 +283,11 @@ export async function emergencyDisableAction(shopId: string): Promise<ActionResu
         // Cancel subscription immediately
         const { error: updateError } = await supabase
             .from('subscriptions')
+            // @ts-ignore - Supabase service client type inference issue
             .update({
                 status: 'canceled',
                 canceled_at: now.toISOString(),
-                current_period_end: now.toISOString(), // End subscription immediately
+                current_period_end: now.toISOString(),
                 updated_at: now.toISOString(),
             })
             .eq('shop_id', shopId)

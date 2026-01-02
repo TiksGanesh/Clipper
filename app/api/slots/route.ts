@@ -96,7 +96,7 @@ export async function GET(req: Request) {
             .from('barbers')
             .select('name')
             .eq('id', barberId)
-            .single()
+            .single() as { data: { name: string } | null }
         
         const barberName = barberData?.name || 'This barber'
         return NextResponse.json({ error: `${barberName} is on leave today. Please select another date or barber.` }, { status: 400 })

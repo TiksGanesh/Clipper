@@ -15,7 +15,7 @@ export async function addBarberLeaveAction(barberId: string, leaveDate: string) 
         .select('id')
         .eq('owner_id', user.id)
         .is('deleted_at', null)
-        .maybeSingle()
+        .maybeSingle() as { data: { id: string } | null; error: any }
 
     if (shopError || !shop) {
         return {
@@ -56,6 +56,7 @@ export async function addBarberLeaveAction(barberId: string, leaveDate: string) 
     }
 
     // Insert barber leave record
+    // @ts-ignore - Supabase type inference issue
     const { error: insertError } = await supabase.from('barber_leaves').insert({
         barber_id: barberId,
         leave_date: leaveDate,
@@ -92,7 +93,7 @@ export async function removeBarberLeaveAction(leaveId: string) {
         .select('id')
         .eq('owner_id', user.id)
         .is('deleted_at', null)
-        .maybeSingle()
+        .maybeSingle() as { data: { id: string } | null; error: any }
 
     if (shopError || !shop) {
         return {

@@ -35,7 +35,20 @@ export async function getAdminShopDetailById(shopId: string): Promise<AdminShopD
     `)
     .eq("id", shopId)
     .limit(1)
-    .single();
+    .single() as { 
+      data: {
+        id: string;
+        name: string;
+        created_at: string;
+        owner_id: string;
+        subscription?: {
+          current_period_start: string;
+          current_period_end: string;
+          status: string;
+        } | null;
+      } | null;
+      error: any;
+    }
 
   if (error) {
     // eslint-disable-next-line no-console
@@ -50,13 +63,12 @@ export async function getAdminShopDetailById(shopId: string): Promise<AdminShopD
   let owner_email: string | null = null;
   let owner_phone: string | null = null;
   try {
-    const { data: owner, error: ownerError } = await supabase
-      .from("users", { schema: "auth" })
-      .select("email, phone")
-      .eq("id", data.owner_id)
-      .maybeSingle();
+    // @ts-ignore - RPC function to get auth user data
+    const { data: owner, error: ownerError } = await supabase.rpc('get_user_by_id', { user_id: data.owner_id });
     if (!ownerError && owner) {
+      // @ts-ignore - owner type from RPC
       owner_email = owner.email ?? null;
+      // @ts-ignore - owner type from RPC
       owner_phone = owner.phone ?? null;
     }
   } catch (e) {

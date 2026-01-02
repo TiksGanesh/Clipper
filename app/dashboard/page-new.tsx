@@ -97,7 +97,17 @@ export default async function DashboardPage() {
             <main className="max-w-7xl mx-auto px-0 md:px-4 lg:px-6 py-4 md:py-6">
                 {/* Mobile Quick Actions (Hidden on Desktop) */}
                 <div className="lg:hidden px-4 md:px-0 mb-4">
-                    <DashboardContent barbers={barbersWithLeaveStatus} />
+                    <DashboardContent 
+                        barbers={barbersWithLeaveStatus}
+                        setupStatus={{
+                            barbersConfigured: true,
+                            servicesConfigured: true,
+                            hoursConfigured: true,
+                            isSetupComplete: true
+                        }}
+                        barberCount={barberCount ?? 0}
+                        serviceCount={servicesCount ?? 0}
+                    />
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6">
@@ -113,7 +123,17 @@ export default async function DashboardPage() {
 
                     {/* Sidebar Navigation - Hidden on mobile, visible on desktop */}
                     <div className="hidden lg:block lg:col-span-1">
-                        <DashboardContent barbers={barbersWithLeaveStatus} />
+                        <DashboardContent 
+                            barbers={barbersWithLeaveStatus}
+                            setupStatus={{
+                                barbersConfigured: true,
+                                servicesConfigured: true,
+                                hoursConfigured: true,
+                                isSetupComplete: true
+                            }}
+                            barberCount={barberCount ?? 0}
+                            serviceCount={servicesCount ?? 0}
+                        />
                     </div>
                 </div>
             </main>

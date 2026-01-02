@@ -48,7 +48,7 @@ export type AdminShopListItem = {
   shop_id: string
   shop_name: string
   owner_email: string | null
-  owner_phone: string
+  owner_phone: string | null
   status: 'setup_pending' | 'trial' | 'active' | 'past_due' | 'canceled' | 'expired'
   subscription_end: string | null
   created_at: string
@@ -81,7 +81,16 @@ export async function getAdminShopList({ status, search, limit = 20, offset = 0 
     shopQuery = shopQuery.ilike('name', `%${search}%`)
   }
 
-  const { data: shops, error: shopsError } = await shopQuery
+  const { data: shops, error: shopsError } = await shopQuery as { 
+    data: Array<{ 
+      id: string; 
+      name: string; 
+      phone: string | null; 
+      owner_id: string; 
+      created_at: string 
+    }> | null; 
+    error: any 
+  }
   if (shopsError) throw shopsError
   if (!shops || shops.length === 0) return []
 
@@ -91,7 +100,14 @@ export async function getAdminShopList({ status, search, limit = 20, offset = 0 
     .from('subscriptions')
     .select('shop_id, status, current_period_end')
     .in('shop_id', shopIds)
-    .is('deleted_at', null)
+    .is('deleted_at', null) as { 
+      data: Array<{ 
+        shop_id: string; 
+        status: string; 
+        current_period_end: string | null 
+      }> | null; 
+      error: any 
+    }
   if (subsError) throw subsError
   const subByShop = new Map<string, { status: string; current_period_end: string | null }>()
   for (const sub of subs ?? []) {
@@ -102,8 +118,10 @@ export async function getAdminShopList({ status, search, limit = 20, offset = 0 
   const ownerIds = shops.map((s) => s.owner_id)
   let ownerIdToEmail = new Map<string, string | null>()
   try {
+    // @ts-ignore - RPC function parameter type
     const { data: users, error: usersError } = await supabase.rpc('get_user_emails', { user_ids: ownerIds })
     if (usersError) throw usersError
+    // @ts-ignore - users type from RPC
     for (const user of users ?? []) {
       ownerIdToEmail.set(user.id, user.email ?? null)
     }
@@ -126,7 +144,7 @@ export async function getAdminShopList({ status, search, limit = 20, offset = 0 
     if (search) {
       const email = ownerIdToEmail.get(shop.owner_id) ?? ''
       if (!shop.name.toLowerCase().includes(search.toLowerCase()) &&
-          !shop.phone.includes(search) &&
+          !(shop.phone ?? '').includes(search) &&
           !email.toLowerCase().includes(search.toLowerCase())) {
         continue
       }

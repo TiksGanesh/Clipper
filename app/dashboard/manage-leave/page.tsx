@@ -16,7 +16,7 @@ export default async function ManageLeavePage() {
         .select('id')
         .eq('owner_id', user.id)
         .is('deleted_at', null)
-        .maybeSingle()
+        .maybeSingle() as { data: { id: string } | null; error: any }
 
     if (!shop) {
         return <SetupPendingMessage userEmail={user.email ?? ''} step="shop" />

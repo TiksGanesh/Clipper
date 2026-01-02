@@ -35,7 +35,15 @@ export default async function DashboardServicesPage() {
         .select('id, name, duration_minutes, is_active')
         .eq('shop_id', shopId)
         .is('deleted_at', null)
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: true }) as { 
+            data: Array<{ 
+                id: string; 
+                name: string; 
+                duration_minutes: number; 
+                is_active: boolean 
+            }> | null; 
+            error: any 
+        }
 
     if (error) {
         console.error('Services fetch failed:', error.message)

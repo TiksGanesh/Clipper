@@ -7,7 +7,7 @@ import { saveShopClosureAction, saveShopNameAction, saveWorkingHoursAction, save
 type Shop = {
     id: string
     name: string
-    phone: string
+    phone: string | null
     address: string | null
 }
 
@@ -36,7 +36,7 @@ const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'S
 
 export default function EditShopInformation({ shop, barbers, workingHours, userEmail }: Props) {
     const [shopName, setShopName] = useState(shop.name)
-    const [shopPhone, setShopPhone] = useState(shop.phone)
+    const [shopPhone, setShopPhone] = useState(shop.phone || '')
     const [shopAddress, setShopAddress] = useState(shop.address || '')
     const [hours, setHours] = useState<WorkingHours>(workingHours)
     const [barberData, setBarberData] = useState<Barber[]>(barbers)

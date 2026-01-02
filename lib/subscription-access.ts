@@ -19,7 +19,14 @@ export async function checkSubscriptionAccess(shopId: string): Promise<Subscript
     .select('status, trial_ends_at, current_period_end')
     .eq('shop_id', shopId)
     .is('deleted_at', null)
-    .maybeSingle()
+    .maybeSingle() as { 
+      data: { 
+        status: string; 
+        trial_ends_at: string | null; 
+        current_period_end: string | null 
+      } | null; 
+      error: any 
+    }
   
   if (!subscription) {
     return { allowed: false, reason: 'not_found' }

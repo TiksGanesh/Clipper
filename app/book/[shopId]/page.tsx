@@ -28,10 +28,10 @@ export default async function PublicBookingPage({ params }: { params: { shopId: 
     const { data: subscriptions, error: subError } = await supabase
         .from('subscriptions')
         .select('status, trial_ends_at, current_period_end, deleted_at')
-        .eq('shop_id', shopIdValue)
+        .eq('shop_id', shopIdValue) as { data: Array<{ status: string; trial_ends_at: string | null; current_period_end: string | null; deleted_at: string | null }> | null; error: any }
 
     // Add after line 40
-    const subscription = subscriptions?.find(s => !(s as any).deleted_at)
+    const subscription = subscriptions?.find(s => !s.deleted_at)
 
     if (!subscription) {
         return (

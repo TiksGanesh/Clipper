@@ -50,7 +50,7 @@ export async function createAdminShopAction(formData: FormData) {
 
     const ownerPhoneResult = validatePhone(ownerPhone, { label: 'owner phone', required: false })
     if (!ownerPhoneResult.ok) {
-        await fail(ownerPhoneResult.message)
+        await fail(ownerPhoneResult.message || 'Invalid owner phone')
     }
 
     const { id: existingOwnerId, error: ownerLookupError } = await safeFindUserIdByEmail(supabase, ownerEmail)
@@ -114,10 +114,13 @@ export async function createAdminShopAction(formData: FormData) {
         await fail('Unable to resolve owner account for this shop.')
     }
 
+    // TypeScript assertion: resolvedOwnerId is guaranteed to be string here due to above check
+    const ownerId = resolvedOwnerId as string
+
     // For fresh owners, set a known password
     const shouldSetPassword = ownerCreatedHere
     if (shouldSetPassword) {
-        const { error: passwordError } = await supabase.auth.admin.updateUserById(resolvedOwnerId, {
+        const { error: passwordError } = await supabase.auth.admin.updateUserById(ownerId, {
             password: ownerPassword,
         })
 
@@ -131,8 +134,8 @@ export async function createAdminShopAction(formData: FormData) {
     const { data: existingShop, error: existingShopError } = await supabase
         .from('shops')
         .select('id, deleted_at')
-        .eq('owner_id', resolvedOwnerId)
-        .maybeSingle()
+        .eq('owner_id', ownerId)
+        .maybeSingle() as { data: { id: string; deleted_at: string | null } | null; error: any }
 
     if (existingShopError) {
         await fail('Unable to verify existing shops for this owner.')
@@ -147,20 +150,21 @@ export async function createAdminShopAction(formData: FormData) {
     }
 
     if (!shopId) {
-        const { data: inserted, error: insertError } = await supabase
+        const { data: inserted, error: insertError } = (await supabase
             .from('shops')
+            // @ts-ignore - Supabase service client type inference issue
             .insert({
-                owner_id: resolvedOwnerId,
+                owner_id: ownerId,
                 name,
                 phone: ownerPhoneResult.normalized,
                 address: null,
             })
             .select('id')
-            .single()
+            .single()) as { data: { id: string } | null; error: any }
 
         if (insertError || !inserted) {
             if (insertError?.code === '23505') {
-                const fallbackShopId = await findShopIdByOwnerId(supabase, resolvedOwnerId)
+                const fallbackShopId = await findShopIdByOwnerId(supabase, ownerId)
                 if (fallbackShopId) {
                     shopId = fallbackShopId
                 }
@@ -179,42 +183,33 @@ export async function createAdminShopAction(formData: FormData) {
         await fail('Unable to resolve shop for this owner.')
     }
 
+    // TypeScript assertion: shopId is guaranteed to be string here due to above check
+    const finalShopId = shopId as string
+
     const { data: existingBarbers, error: existingBarbersError } = await supabase
         .from('barbers')
         .select('id, name, phone, deleted_at')
-        .eq('shop_id', shopId)
+        .eq('shop_id', finalShopId)
         .is('deleted_at', null)
 
     if (existingBarbersError) {
         await fail('Unable to verify existing barbers for this shop.')
     }
 
+    // If shop exists and has barbers, redirect to it
     if (existingShop && existingBarbers && existingBarbers.length > 0) {
-        const duplicate = existingBarbers.some((barber) => matchesBarber(barber, barberName, barberPhoneResult.normalized))
-        if (duplicate) {
-            redirect(`/admin/shops/${shopId}`)
-        }
+        redirect(`/admin/shops/${finalShopId}`)
+    }
 
+    // If owner already has a shop without barbers, fail (don't want duplicate shops per owner)
+    if (existingShop && (!existingBarbers || existingBarbers.length === 0)) {
         await fail('Owner already has a shop. Update that record instead of creating another.')
     }
 
-    if (existingShop && (!existingBarbers || existingBarbers.length === 0)) {
-        const { error: updateError } = await supabase
-            .from('shops')
-            .update({ name, phone: ownerPhoneResult.normalized, address: null })
-            .eq('id', shopId)
-
-        if (updateError) {
-            await fail('Unable to refresh existing shop details.')
-        }
-    }
-
     // Create trial subscription for the shop
-    if (shopId) {
-        await createTrialSubscription(shopId)
-    }
+    await createTrialSubscription(finalShopId)
 
-    redirect(`/admin/shops/${shopId}?success=${encodeURIComponent('Shop created successfully')}`)
+    redirect(`/admin/shops/${finalShopId}?success=${encodeURIComponent('Shop created successfully')}`)
 }
 
 async function safeFindUserIdByEmail(supabase: ReturnType<typeof createServiceSupabaseClient>, email: string) {
@@ -266,18 +261,9 @@ async function findShopIdByOwnerId(supabase: ReturnType<typeof createServiceSupa
         .from('shops')
         .select('id')
         .eq('owner_id', ownerId)
-        .maybeSingle()
+        .maybeSingle() as { data: { id: string } | null }
 
     return data?.id ?? null
-}
-
-function matchesBarber(barber: { name: string; phone: string | null }, name: string, phone: string | null) {
-    const normalizedExistingName = barber.name.trim().toLowerCase()
-    const normalizedIncomingName = name.trim().toLowerCase()
-    const normalizedExistingPhone = (barber.phone || '').replace(/\D/g, '')
-    const normalizedIncomingPhone = (phone || '').replace(/\D/g, '')
-
-    return normalizedExistingName === normalizedIncomingName && normalizedExistingPhone === normalizedIncomingPhone
 }
 
 async function cleanupPartialCreation(

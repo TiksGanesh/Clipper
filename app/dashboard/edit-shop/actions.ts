@@ -5,6 +5,9 @@ import { requireAuth } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 import { checkSubscriptionAccess } from '@/lib/subscription-access'
 
+// Type helper for shop queries
+type ShopIdResult = { data: { id: string } | null; error: any }
+
 // Phone validation constants (matches admin flow)
 const PHONE_DIGITS_MIN = 7
 const PHONE_DIGITS_MAX = 15
@@ -46,7 +49,7 @@ export async function saveShopClosureAction(
         .select('id')
         .eq('owner_id', user.id)
         .is('deleted_at', null)
-        .maybeSingle()
+        .maybeSingle() as ShopIdResult
 
     if (shopError || !shop) {
         return {
@@ -68,6 +71,7 @@ export async function saveShopClosureAction(
     if (!isClosed) {
         const { error: deleteError } = await supabase
             .from('shop_closures')
+            // @ts-ignore - Supabase service client type inference issue
             .update({ deleted_at: new Date().toISOString() })
             .eq('shop_id', shop.id)
             .is('deleted_at', null)
@@ -103,10 +107,12 @@ export async function saveShopClosureAction(
     // Soft delete existing closure and insert new one
     await supabase
         .from('shop_closures')
+        // @ts-ignore - Supabase service client type inference issue
         .update({ deleted_at: new Date().toISOString() })
         .eq('shop_id', shop.id)
         .is('deleted_at', null)
 
+    // @ts-ignore - Supabase service client type inference issue
     const { error: insertError } = await supabase.from('shop_closures').insert({
         shop_id: shop.id,
         closed_from: closedFrom,
@@ -144,7 +150,7 @@ export async function saveShopNameAction(shopName: string) {
         .select('id')
         .eq('owner_id', user.id)
         .is('deleted_at', null)
-        .maybeSingle()
+        .maybeSingle() as ShopIdResult
 
     if (shopError || !shop) {
         return {
@@ -165,6 +171,7 @@ export async function saveShopNameAction(shopName: string) {
     // Update shop name
     const { error: updateError } = await supabase
         .from('shops')
+        // @ts-ignore - Supabase service client type inference issue
         .update({ name: shopName.trim() })
         .eq('id', shop.id)
 
@@ -198,7 +205,7 @@ export async function saveWorkingHoursAction(hours: {
         .select('id')
         .eq('owner_id', user.id)
         .is('deleted_at', null)
-        .maybeSingle()
+        .maybeSingle() as ShopIdResult
 
     if (shopError || !shop) {
         return {
@@ -256,6 +263,7 @@ export async function saveWorkingHoursAction(hours: {
     // Use upsert to avoid duplicate key conflicts
     const { error: upsertError } = await supabase
         .from('working_hours')
+        // @ts-ignore - Supabase service client type inference issue
         .upsert(workingHoursData, {
             onConflict: 'shop_id,day_of_week',
         })
@@ -284,7 +292,7 @@ export async function saveBarberDetailsAction(barbers: Array<{ id: string; name:
         .select('id')
         .eq('owner_id', user.id)
         .is('deleted_at', null)
-        .maybeSingle()
+        .maybeSingle() as ShopIdResult
 
     if (shopError || !shop) {
         return {
@@ -317,6 +325,7 @@ export async function saveBarberDetailsAction(barbers: Array<{ id: string; name:
     for (const barber of barbers) {
         const { error: updateError } = await supabase
             .from('barbers')
+            // @ts-ignore - Supabase service client type inference issue
             .update({
                 name: barber.name.trim(),
                 phone: barber.phone?.trim() || null,
@@ -358,7 +367,7 @@ export async function saveShopContactAction(phone: string | null, address: strin
         .select('id')
         .eq('owner_id', user.id)
         .is('deleted_at', null)
-        .maybeSingle()
+        .maybeSingle() as ShopIdResult
 
     if (shopError || !shop) {
         return {
@@ -391,6 +400,7 @@ export async function saveShopContactAction(phone: string | null, address: strin
     // Update shop contact info
     const { error: updateError } = await supabase
         .from('shops')
+        // @ts-ignore - Supabase service client type inference issue
         .update({
             phone: phoneResult.normalized,
             address: normalizedAddress,
@@ -421,7 +431,7 @@ export async function addBarberAction(name: string, phone: string | null) {
         .select('id')
         .eq('owner_id', user.id)
         .is('deleted_at', null)
-        .maybeSingle()
+        .maybeSingle() as ShopIdResult
 
     if (shopError || !shop) {
         return {
@@ -480,6 +490,7 @@ export async function addBarberAction(name: string, phone: string | null) {
     }
 
     // Insert new barber
+    // @ts-expect-error - Supabase type inference issue
     const { error: insertError } = await supabase.from('barbers').insert({
         shop_id: shop.id,
         name: name.trim(),

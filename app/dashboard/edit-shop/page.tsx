@@ -16,7 +16,7 @@ export default async function EditShopPage() {
         .select('id, name, phone, address')
         .eq('owner_id', user.id)
         .is('deleted_at', null)
-        .maybeSingle()
+        .maybeSingle() as { data: { id: string; name: string; phone: string | null; address: string | null } | null; error: any }
 
     if (!shop) {
         return <SetupPendingMessage userEmail={user.email ?? ''} step="shop" />
@@ -35,13 +35,13 @@ export default async function EditShopPage() {
         .eq('shop_id', shop.id)
         .eq('is_active', true)
         .is('deleted_at', null)
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: true }) as { data: Array<{ id: string; name: string; phone: string | null }> | null; error: any }
 
     // Fetch working hours
     const { data: workingHoursData } = await supabase
         .from('working_hours')
         .select('day_of_week, open_time, close_time, is_closed')
-        .eq('shop_id', shop.id)
+        .eq('shop_id', shop.id) as { data: Array<{ day_of_week: number; open_time: string; close_time: string; is_closed: boolean }> | null; error: any }
 
     // Map working hours to days
     const workingHours: Record<string, any> = {}

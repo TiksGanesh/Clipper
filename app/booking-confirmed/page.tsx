@@ -158,8 +158,7 @@ export default function BookingConfirmedPage({
               window.close()
             }
           }}
-          className={`w-full ${isWalkIn ? 'bg-blue-600 hover:bg-blue-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white font-medium py-3 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors`}
-          style={{ focusRingColor: isWalkIn ? '#3B82F6' : '#4F46E5' }}
+          className={`w-full ${isWalkIn ? 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500' : 'bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500'} text-white font-medium py-3 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors`}
         >
           {isWalkIn ? 'Go to Dashboard' : 'Done'}
         </button>

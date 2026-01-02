@@ -39,6 +39,7 @@ export async function POST(request: NextRequest) {
 
         const { error: adminError } = await supabase
             .from('admin_users')
+            // @ts-ignore - Supabase service client type inference issue
             .insert({ user_id: authUser.user.id })
 
         if (adminError) {

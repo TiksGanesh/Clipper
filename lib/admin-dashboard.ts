@@ -2,7 +2,7 @@ export type SetupPendingShop = {
   shop_id: string
   shop_name: string
   owner_email: string | null
-  owner_phone: string
+  owner_phone: string | null
   created_at: string
 }
 
@@ -19,7 +19,16 @@ export async function getLatestSetupPendingShops(limit = 10): Promise<SetupPendi
     .select('id, name, phone, created_at, owner_id')
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
-    .limit(limit * 2)
+    .limit(limit * 2) as { 
+      data: Array<{ 
+        id: string; 
+        name: string; 
+        phone: string | null; 
+        created_at: string; 
+        owner_id: string 
+      }> | null; 
+      error: any 
+    }
 
   if (shopsError) throw shopsError
   if (!shops) return []
@@ -31,7 +40,7 @@ export async function getLatestSetupPendingShops(limit = 10): Promise<SetupPendi
     .from('subscriptions')
     .select('shop_id')
     .in('shop_id', shopIds)
-    .is('deleted_at', null)
+    .is('deleted_at', null) as { data: Array<{ shop_id: string }> | null; error: any }
   if (subsError) throw subsError
   const subShopIds = new Set(subs?.map((s) => s.shop_id) ?? [])
 
@@ -44,8 +53,10 @@ export async function getLatestSetupPendingShops(limit = 10): Promise<SetupPendi
   // Query auth.users for owner emails using RPC (if available)
   let ownerIdToEmail = new Map<string, string | null>()
   try {
+    // @ts-ignore - RPC function parameter type
     const { data: users, error: usersError } = await supabase.rpc('get_user_emails', { user_ids: ownerIds })
     if (usersError) throw usersError
+    // @ts-ignore - users type from RPC
     for (const user of users ?? []) {
       ownerIdToEmail.set(user.id, user.email ?? null)
     }
@@ -85,7 +96,7 @@ export async function getShopAdminDashboardCounts(): Promise<ShopAdminDashboardC
   const { data: shops, error: shopsError } = await supabase
     .from('shops')
     .select('id')
-    .is('deleted_at', null)
+    .is('deleted_at', null) as { data: Array<{ id: string }> | null; error: any }
 
   if (shopsError) throw shopsError
 
@@ -105,7 +116,7 @@ export async function getShopAdminDashboardCounts(): Promise<ShopAdminDashboardC
     .from('subscriptions')
     .select('shop_id, status')
     .in('shop_id', shops.map((s) => s.id))
-    .is('deleted_at', null)
+    .is('deleted_at', null) as { data: Array<{ shop_id: string; status: string }> | null; error: any }
 
   if (subsError) throw subsError
 
