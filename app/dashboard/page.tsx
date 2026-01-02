@@ -5,6 +5,8 @@ import DayView from '@/components/calendar/DayView'
 import DashboardContent from './dashboard-content'
 import { getBarberLeaveStatuses } from '@/lib/barber-leave'
 import { getShopSetupStatus } from '@/lib/shop-setup-status'
+import { checkSubscriptionAccess } from '@/lib/subscription-access'
+import SubscriptionBlockedPage from '@/components/dashboard/SubscriptionBlockedPage'
 
 type Barber = {
     id: string
@@ -45,6 +47,12 @@ export default async function DashboardPage() {
         redirect('/setup/shop')
     }
     const activeShopId = shopId as string
+
+    // CRITICAL SECURITY: Check subscription status before allowing dashboard access
+    const accessCheck = await checkSubscriptionAccess(activeShopId)
+    if (!accessCheck.allowed) {
+        return <SubscriptionBlockedPage reason={accessCheck.reason} />
+    }
 
     const [{ count: barberCount }, { count: servicesCount }, { count: hoursCount }] = await Promise.all([
         supabase.from('barbers').select('id', { count: 'exact', head: true }).eq('shop_id', activeShopId).is('deleted_at', null),

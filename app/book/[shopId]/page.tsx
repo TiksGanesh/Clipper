@@ -2,10 +2,15 @@ import { notFound } from 'next/navigation'
 import BookingForm from '@/components/booking/BookingForm'
 import { createServiceSupabaseClient } from '@/lib/supabase'
 import { getShopClosure, formatClosurePeriod } from '@/lib/shop-closure'
+import BookingErrorPage from '@/components/booking/BookingErrorPage'
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export default async function PublicBookingPage({ params }: { params: { shopId: string } }) {
-    const supabase = createServiceSupabaseClient()
+       const supabase = createServiceSupabaseClient()
 
+    // First, get the shop
     const { data: shop, error: shopError } = await supabase
         .from('shops')
         .select('id, name, address, phone, deleted_at')
@@ -18,6 +23,70 @@ export default async function PublicBookingPage({ params }: { params: { shopId: 
 
     const shopData = shop as any
     const shopIdValue = shopData.id
+
+    // Separately fetch subscription with explicit filter
+    const { data: subscriptions, error: subError } = await supabase
+        .from('subscriptions')
+        .select('status, trial_ends_at, current_period_end, deleted_at')
+        .eq('shop_id', shopIdValue)
+
+    // Add after line 40
+    const subscription = subscriptions?.find(s => !(s as any).deleted_at)
+
+    if (!subscription) {
+        return (
+            <BookingErrorPage 
+                message="This shop is not currently accepting online bookings. Please contact the shop directly."
+                shopName={shopData.name}
+                shopPhone={shopData.phone}
+            />
+        )
+    }
+
+    // Check for blocked subscription statuses
+    const blockedStatuses = ['canceled', 'expired', 'past_due']
+    if (blockedStatuses.includes(subscription.status)) {
+        const messages: Record<string, string> = {
+            canceled: 'This shop is temporarily unavailable. Please try again later or contact the shop directly.',
+            expired: 'This shop is temporarily unavailable. Please contact the shop directly.',
+            past_due: 'This shop is temporarily unavailable. Please try again later or contact the shop directly.'
+        }
+        return (
+            <BookingErrorPage 
+                message={messages[subscription.status] || 'This shop is currently unavailable.'}
+                shopName={shopData.name}
+                shopPhone={shopData.phone}
+            />
+        )
+    }
+
+    // Check trial expiry
+    if (subscription.status === 'trial') {
+        const trialEnd = subscription.trial_ends_at ? new Date(subscription.trial_ends_at) : null
+        if (trialEnd && trialEnd < new Date()) {
+            return (
+                <BookingErrorPage 
+                    message="This shop's trial period has ended. Please contact the shop directly."
+                    shopName={shopData.name}
+                    shopPhone={shopData.phone}
+                />
+            )
+        }
+    }
+
+    // Check active subscription expiry
+    if (subscription.status === 'active') {
+        const periodEnd = subscription.current_period_end ? new Date(subscription.current_period_end) : null
+        if (periodEnd && periodEnd < new Date()) {
+            return (
+                <BookingErrorPage 
+                    message="This shop is temporarily unavailable. Please try again later or contact the shop directly."
+                    shopName={shopData.name}
+                    shopPhone={shopData.phone}
+                />
+            )
+        }
+    }
 
     // Check for shop closure
     const shopClosure = await getShopClosure(shopIdValue)

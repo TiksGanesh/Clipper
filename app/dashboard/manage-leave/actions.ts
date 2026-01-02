@@ -3,6 +3,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { requireAuth } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
+import { checkSubscriptionAccess } from '@/lib/subscription-access'
 
 export async function addBarberLeaveAction(barberId: string, leaveDate: string) {
     const user = await requireAuth()
@@ -20,6 +21,15 @@ export async function addBarberLeaveAction(barberId: string, leaveDate: string) 
         return {
             success: false,
             error: 'Shop not found',
+        }
+    }
+
+    // CRITICAL SECURITY: Check subscription access
+    const accessCheck = await checkSubscriptionAccess(shop.id)
+    if (!accessCheck.allowed) {
+        return {
+            success: false,
+            error: 'Your subscription is not active. Please contact support.',
         }
     }
 
@@ -88,6 +98,15 @@ export async function removeBarberLeaveAction(leaveId: string) {
         return {
             success: false,
             error: 'Shop not found',
+        }
+    }
+
+    // CRITICAL SECURITY: Check subscription access
+    const accessCheck = await checkSubscriptionAccess(shop.id)
+    if (!accessCheck.allowed) {
+        return {
+            success: false,
+            error: 'Your subscription is not active. Please contact support.',
         }
     }
 

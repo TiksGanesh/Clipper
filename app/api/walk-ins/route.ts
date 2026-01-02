@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server'
 import { createServiceSupabaseClient } from '@/lib/supabase'
 import { requireAuth } from '@/lib/auth'
+import { checkSubscriptionAccess } from '@/lib/subscription-access'
 
 export async function POST(req: NextRequest) {
     try {
@@ -72,6 +73,12 @@ export async function POST(req: NextRequest) {
 
         if (!shop || (shop as any).owner_id !== user.id) {
             return NextResponse.json({ error: 'Unauthorized: you do not own this shop' }, { status: 403 })
+        }
+
+        // CRITICAL SECURITY: Check subscription access
+        const accessCheck = await checkSubscriptionAccess(shopId)
+        if (!accessCheck.allowed) {
+            return NextResponse.json({ error: 'Shop subscription is not active' }, { status: 403 })
         }
 
         const totalDuration = (services as any[]).reduce((sum, s) => sum + (s.duration_minutes || 0), 0)

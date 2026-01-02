@@ -5,6 +5,8 @@ import { requireAuth } from '@/lib/auth'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import ManageServicesClient from '@/components/dashboard/ManageServicesClient'
 import SetupPendingMessage from '@/components/dashboard/SetupPendingMessage'
+import { checkSubscriptionAccess } from '@/lib/subscription-access'
+import SubscriptionBlockedPage from '@/components/dashboard/SubscriptionBlockedPage'
 
 export default async function DashboardServicesPage() {
     const user = await requireAuth()
@@ -20,6 +22,12 @@ export default async function DashboardServicesPage() {
     const shopId = shop?.id
     if (!shopId) {
         return <SetupPendingMessage userEmail={user.email ?? ''} step="shop" />
+    }
+
+    // CRITICAL SECURITY: Check subscription status
+    const accessCheck = await checkSubscriptionAccess(shopId)
+    if (!accessCheck.allowed) {
+        return <SubscriptionBlockedPage reason={accessCheck.reason} />
     }
 
     const { data: services, error } = await supabase

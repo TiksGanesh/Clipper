@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { requireAuth } from '@/lib/auth'
 import { createServerActionClient } from '@/lib/supabase'
+import { checkSubscriptionAccess } from '@/lib/subscription-access'
 
 const DASHBOARD_SERVICES_PATH = '/dashboard/services'
 
@@ -20,6 +21,12 @@ async function getShopIdForOwner() {
 
     if (!shop?.id) {
         redirect('/setup/shop')
+    }
+
+    // CRITICAL SECURITY: Check subscription access
+    const accessCheck = await checkSubscriptionAccess(shop.id)
+    if (!accessCheck.allowed) {
+        throw new Error('Your subscription is not active. Please contact support.')
     }
 
     return { userId: user.id, shopId: shop.id, supabase }

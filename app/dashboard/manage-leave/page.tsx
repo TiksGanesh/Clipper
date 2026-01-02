@@ -3,6 +3,8 @@ import { requireAuth } from '@/lib/auth'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import ManageBarberLeave from '@/components/dashboard/ManageBarberLeave'
 import SetupPendingMessage from '@/components/dashboard/SetupPendingMessage'
+import { checkSubscriptionAccess } from '@/lib/subscription-access'
+import SubscriptionBlockedPage from '@/components/dashboard/SubscriptionBlockedPage'
 
 export default async function ManageLeavePage() {
     const user = await requireAuth()
@@ -18,6 +20,12 @@ export default async function ManageLeavePage() {
 
     if (!shop) {
         return <SetupPendingMessage userEmail={user.email ?? ''} step="shop" />
+    }
+
+    // CRITICAL SECURITY: Check subscription status
+    const accessCheck = await checkSubscriptionAccess(shop.id)
+    if (!accessCheck.allowed) {
+        return <SubscriptionBlockedPage reason={accessCheck.reason} />
     }
 
     // Fetch barbers

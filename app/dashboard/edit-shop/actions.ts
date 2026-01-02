@@ -3,6 +3,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { requireAuth } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
+import { checkSubscriptionAccess } from '@/lib/subscription-access'
 
 // Phone validation constants (matches admin flow)
 const PHONE_DIGITS_MIN = 7
@@ -51,6 +52,15 @@ export async function saveShopClosureAction(
         return {
             success: false,
             error: 'Shop not found',
+        }
+    }
+
+    // CRITICAL SECURITY: Check subscription access
+    const accessCheck = await checkSubscriptionAccess(shop.id)
+    if (!accessCheck.allowed) {
+        return {
+            success: false,
+            error: 'Your subscription is not active. Please contact support.',
         }
     }
 
@@ -143,6 +153,15 @@ export async function saveShopNameAction(shopName: string) {
         }
     }
 
+    // CRITICAL SECURITY: Check subscription access
+    const accessCheck = await checkSubscriptionAccess(shop.id)
+    if (!accessCheck.allowed) {
+        return {
+            success: false,
+            error: 'Your subscription is not active. Please contact support.',
+        }
+    }
+
     // Update shop name
     const { error: updateError } = await supabase
         .from('shops')
@@ -185,6 +204,15 @@ export async function saveWorkingHoursAction(hours: {
         return {
             success: false,
             error: 'Shop not found',
+        }
+    }
+
+    // CRITICAL SECURITY: Check subscription access
+    const accessCheck = await checkSubscriptionAccess(shop.id)
+    if (!accessCheck.allowed) {
+        return {
+            success: false,
+            error: 'Your subscription is not active. Please contact support.',
         }
     }
 
@@ -265,6 +293,15 @@ export async function saveBarberDetailsAction(barbers: Array<{ id: string; name:
         }
     }
 
+    // CRITICAL SECURITY: Check subscription access
+    const accessCheck = await checkSubscriptionAccess(shop.id)
+    if (!accessCheck.allowed) {
+        return {
+            success: false,
+            error: 'Your subscription is not active. Please contact support.',
+        }
+    }
+
     // Validate barbers
     for (const barber of barbers) {
         if (!barber.name?.trim()) {
@@ -330,6 +367,15 @@ export async function saveShopContactAction(phone: string | null, address: strin
         }
     }
 
+    // CRITICAL SECURITY: Check subscription access
+    const accessCheck = await checkSubscriptionAccess(shop.id)
+    if (!accessCheck.allowed) {
+        return {
+            success: false,
+            error: 'Your subscription is not active. Please contact support.',
+        }
+    }
+
     // Validate phone (required for shop)
     const phoneResult = validatePhone(phone, { label: 'shop phone', required: true })
     if (!phoneResult.ok) {
@@ -381,6 +427,15 @@ export async function addBarberAction(name: string, phone: string | null) {
         return {
             success: false,
             error: 'Shop not found',
+        }
+    }
+
+    // CRITICAL SECURITY: Check subscription access
+    const accessCheck = await checkSubscriptionAccess(shop.id)
+    if (!accessCheck.allowed) {
+        return {
+            success: false,
+            error: 'Your subscription is not active. Please contact support.',
         }
     }
 

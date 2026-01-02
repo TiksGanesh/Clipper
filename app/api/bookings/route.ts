@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServiceSupabaseClient } from '@/lib/supabase'
 import { computeAvailableSlots, getUtcDayRange } from '@/lib/slots'
+import { checkSubscriptionAccess } from '@/lib/subscription-access'
 
 export async function POST(req: Request) {
     const supabase = createServiceSupabaseClient()
@@ -95,6 +96,12 @@ export async function POST(req: Request) {
 
     if (!barber || (barber as any).deleted_at || (barber as any).is_active === false || (barber as any).shop_id !== shopId) {
         return NextResponse.json({ error: 'Barber not available for this shop' }, { status: 400 })
+    }
+
+    // CRITICAL SECURITY: Check subscription access
+    const accessCheck = await checkSubscriptionAccess(shopId as string)
+    if (!accessCheck.allowed) {
+        return NextResponse.json({ error: 'Shop subscription is not active' }, { status: 403 })
     }
 
     let dayRange: ReturnType<typeof getUtcDayRange>

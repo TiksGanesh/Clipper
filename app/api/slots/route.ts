@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServiceSupabaseClient } from '@/lib/supabase'
 import { computeAvailableSlots, getUtcDayRange } from '@/lib/slots'
 import { isShopClosed } from '@/lib/shop-closure'
+import { checkSubscriptionAccess } from '@/lib/subscription-access'
 
 // Helper to convert minutes since midnight to HH:MM:SS format
 function minutesToTimeString(minutes: number): string {
@@ -57,6 +58,13 @@ export async function GET(req: Request) {
 
     if (!barber || (barber as any).deleted_at || (barber as any).is_active === false) {
         return NextResponse.json({ error: 'Barber not found' }, { status: 404 })
+    }
+
+    // CRITICAL SECURITY: Check subscription access
+    const shopId = (barber as any).shop_id
+    const accessCheck = await checkSubscriptionAccess(shopId)
+    if (!accessCheck.allowed) {
+        return NextResponse.json({ error: 'Shop subscription is not active' }, { status: 403 })
     }
 
     // Check if shop is closed on this date

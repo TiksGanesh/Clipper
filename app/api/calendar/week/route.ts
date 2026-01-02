@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { fetchBarberBookings } from '@/lib/bookings'
+import { checkSubscriptionAccess } from '@/lib/subscription-access'
 
 type DayBooking = {
     id: string
@@ -42,6 +43,12 @@ export async function GET(request: Request): Promise<Response> {
 
         if (!shop) {
             return Response.json({ error: 'Shop not found' }, { status: 404 })
+        }
+
+        // CRITICAL SECURITY: Check subscription access
+        const accessCheck = await checkSubscriptionAccess(shop.id)
+        if (!accessCheck.allowed) {
+            return Response.json({ error: 'Shop subscription is not active' }, { status: 403 })
         }
 
         // Validate barber exists and belongs to shop

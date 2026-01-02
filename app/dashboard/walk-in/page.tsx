@@ -4,6 +4,8 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import WalkInForm from '@/components/booking/WalkInForm'
 import SetupPendingMessage from '@/components/dashboard/SetupPendingMessage'
+import { checkSubscriptionAccess } from '@/lib/subscription-access'
+import SubscriptionBlockedPage from '@/components/dashboard/SubscriptionBlockedPage'
 
 type Barber = {
     id: string
@@ -31,6 +33,12 @@ export default async function WalkInPage() {
     const shopId = (shop as { id: string } | null)?.id
     if (!shopId) {
         return <SetupPendingMessage userEmail={user.email ?? ''} step="shop" />
+    }
+
+    // CRITICAL SECURITY: Check subscription status
+    const accessCheck = await checkSubscriptionAccess(shopId)
+    if (!accessCheck.allowed) {
+        return <SubscriptionBlockedPage reason={accessCheck.reason} />
     }
 
     const shopPhone = (shop as { phone?: string } | null)?.phone

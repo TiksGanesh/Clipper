@@ -6,6 +6,12 @@ import { getAdminShopDetailById } from "@/lib/admin-shop-detail";
 import { getShopSetupStatus } from "@/lib/shop-setup-status";
 import { getShopRelatedData } from "@/lib/shop-related-data";
 import ActionButton from "@/components/dashboard/ActionButton";
+import { 
+    extendTrialAction, 
+    reactivateShopAction, 
+    suspendShopAction, 
+    emergencyDisableAction 
+} from './actions';
 
 interface PageProps {
     params: { shopId?: string };
@@ -284,9 +290,16 @@ export default async function Page({ params, searchParams }: PageProps) {
                         <div className="mb-6">
                             <h3 className="text-sm font-medium text-gray-700 mb-3">Subscription Management</h3>
                             <div className="flex flex-col gap-2">
-                                <ActionButton label="Extend Trial" confirm="Extend trial period for this shop?" />
-                                <ActionButton label="Set Subscription Dates" confirm="Update subscription start and end dates?" />
-                                <ActionButton label="Reactivate Shop" confirm="Reactivate this shop? Bookings will be enabled." />
+                                <ActionButton 
+                                    label="Extend Trial" 
+                                    confirm="Extend trial period by 30 days for this shop?" 
+                                    action={extendTrialAction.bind(null, shopId)}
+                                />
+                                <ActionButton 
+                                    label="Reactivate Shop" 
+                                    confirm="Reactivate this shop? Will grant 30 days access period." 
+                                    action={reactivateShopAction.bind(null, shopId)}
+                                />
                             </div>
                         </div>
 
@@ -294,8 +307,18 @@ export default async function Page({ params, searchParams }: PageProps) {
                         <div className="pt-4 border-t border-gray-200">
                             <h3 className="text-sm font-medium text-red-700 mb-3">Restrictive Actions</h3>
                             <div className="flex flex-col gap-2">
-                                <ActionButton label="Suspend Shop" confirm="Suspend this shop? All bookings will be blocked." />
-                                <ActionButton label="Disable Booking (Emergency)" confirm="Emergency disable? All bookings will stop immediately." />
+                                <ActionButton 
+                                    label="Suspend Shop" 
+                                    confirm="Suspend this shop? All bookings will be blocked." 
+                                    action={suspendShopAction.bind(null, shopId)}
+                                    variant="danger"
+                                />
+                                <ActionButton 
+                                    label="Emergency Disable" 
+                                    confirm="⚠️ EMERGENCY CANCEL - This will immediately block ALL access. Are you absolutely sure?" 
+                                    action={emergencyDisableAction.bind(null, shopId)}
+                                    variant="danger"
+                                />
                             </div>
                         </div>
                     </section>

@@ -10,7 +10,7 @@ export interface ShopService {
   id: string;
   name: string;
   duration_minutes: number;
-  advance_amount: number;
+  price: number;
 }
 
 export interface ShopWorkingHour {
@@ -58,7 +58,7 @@ export async function getShopRelatedData(shopId: string): Promise<ShopRelatedDat
   // Services (max 10)
   const { data: services = [], error: servicesError } = await supabase
     .from("services")
-    .select("id, name, duration_minutes, advance_amount")
+    .select("id, name, duration_minutes, price")
     .eq("shop_id", shopId)
     .is("deleted_at", null)
     .order("created_at", { ascending: true })

@@ -3,6 +3,8 @@ import { createServerSupabaseClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
 import DayView from '@/components/calendar/DayView'
 import SetupPendingMessage from '@/components/dashboard/SetupPendingMessage'
+import { checkSubscriptionAccess } from '@/lib/subscription-access'
+import SubscriptionBlockedPage from '@/components/dashboard/SubscriptionBlockedPage'
 
 type BarberOption = {
     id: string
@@ -23,6 +25,12 @@ export default async function BarberCalendarPage({ searchParams }: { searchParam
     const shopId = shop?.id
     if (!shopId) {
         return <SetupPendingMessage userEmail={user.email ?? ''} step="shop" />
+    }
+
+    // CRITICAL SECURITY: Check subscription status
+    const accessCheck = await checkSubscriptionAccess(shopId)
+    if (!accessCheck.allowed) {
+        return <SubscriptionBlockedPage reason={accessCheck.reason} />
     }
 
     const { data: barbers } = await supabase
