@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from './supabase'
+import { createServiceSupabaseClient } from './supabase'
 
 export type SubscriptionCheckResult = 
   | { allowed: true }
@@ -12,7 +12,7 @@ export type SubscriptionCheckResult =
  * Blocked statuses: 'canceled', 'expired', expired trials, expired periods, 'past_due'
  */
 export async function checkSubscriptionAccess(shopId: string): Promise<SubscriptionCheckResult> {
-  const supabase = await createServerSupabaseClient()
+  const supabase = createServiceSupabaseClient()
   
   const { data: subscription } = await supabase
     .from('subscriptions')
