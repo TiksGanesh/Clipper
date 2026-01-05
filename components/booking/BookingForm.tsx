@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Script from 'next/script'
 
 type Shop = {
     id: string
@@ -37,23 +38,26 @@ type Props = {
 export default function BookingForm({ shop, barbers, services }: Props) {
     const router = useRouter()
     const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1)
+    
+    // Form State
     const [barberId, setBarberId] = useState(barbers[0]?.id ?? '')
     const [serviceIds, setServiceIds] = useState<string[]>([])
     const [date, setDate] = useState('')
     const [slots, setSlots] = useState<Slot[]>([])
     const [selectedSlot, setSelectedSlot] = useState<string>('')
-    const [slotsLoading, setSlotsLoading] = useState(false)
-    const [error, setError] = useState<string>('')
-    const [success, setSuccess] = useState<string>('')
     const [customerName, setCustomerName] = useState('')
     const [customerPhone, setCustomerPhone] = useState('')
+
+    // UI State
+    const [slotsLoading, setSlotsLoading] = useState(false)
+    const [error, setError] = useState<string>('')
     const [submitting, setSubmitting] = useState(false)
 
-    // Get browser timezone offset in minutes (negative for ahead of UTC)
+    // Derived State
     const timezoneOffset = useMemo(() => new Date().getTimezoneOffset(), [])
-
     const selectedServices = useMemo(() => services.filter((s) => serviceIds.includes(s.id)), [services, serviceIds])
     const totalDuration = useMemo(() => selectedServices.reduce((sum, s) => sum + (s.duration_minutes || 0), 0), [selectedServices])
+    const totalPrice = useMemo(() => selectedServices.reduce((sum, s) => sum + (s.price || 0), 0), [selectedServices])
     const selectedServiceName = useMemo(() => selectedServices.map((s) => s.name).join(' + '), [selectedServices])
 
     const maxDateStr = useMemo(() => {
@@ -62,7 +66,7 @@ export default function BookingForm({ shop, barbers, services }: Props) {
         return plus1.toISOString().slice(0, 10)
     }, [])
 
-
+    // Fetch Slots
     useEffect(() => {
         setSelectedSlot('')
         if (!barberId || serviceIds.length === 0 || !date) {
@@ -82,16 +86,12 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                     timezone_offset: String(timezoneOffset),
                 })
                 const res = await fetch(`/api/slots?${params.toString()}`, { signal: controller.signal })
-                if (!res.ok) {
-                    const body = await res.json().catch(() => ({}))
-                    throw new Error(body.error || 'Failed to load slots')
-                }
+                if (!res.ok) throw new Error('Failed to load slots')
                 const body = await res.json()
                 setSlots(body.slots ?? [])
             } catch (err: any) {
                 if (err.name === 'AbortError') return
                 setSlots([])
-                setError(err.message)
             } finally {
                 setSlotsLoading(false)
             }
@@ -101,95 +101,134 @@ export default function BookingForm({ shop, barbers, services }: Props) {
         return () => controller.abort()
     }, [barberId, serviceIds, date, timezoneOffset])
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    // --- PAYMENT & SUBMISSION LOGIC ---
+
+    const handlePaymentAndBooking = async (e: React.FormEvent) => {
         e.preventDefault()
-        
-        // Detailed validation with clear error messages
-        if (!barberId) {
-            setError('Please select a barber')
-            return
-        }
-        if (serviceIds.length === 0) {
-            setError('Please select at least one service')
-            return
-        }
-        if (!date) {
-            setError('Please select a date')
-            return
-        }
-        if (!selectedSlot) {
-            setError('Please select a time slot')
-            return
-        }
-        if (!customerName.trim()) {
-            setError('Please enter your name')
-            return
-        }
-        if (!customerPhone.trim()) {
-            setError('Please enter your phone number')
-            return
-        }
+        setError('')
+
+        // 1. Validation
+        if (!barberId) return setError('Please select a barber')
+        if (serviceIds.length === 0) return setError('Please select a service')
+        if (!date || !selectedSlot) return setError('Please select a time slot')
+        if (!customerName.trim() || !customerPhone.trim()) return setError('Please enter your details')
 
         setSubmitting(true)
-        setError('')
-        setSuccess('')
 
         try {
-            console.log('Booking submission - no advance payment; creating booking')
-            await createBookingWithoutPayment()
+            // 2. Create Order on Backend
+            // We send the total price to the backend to create a Razorpay Order
+            const orderRes = await fetch("/api/payment", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    amount: totalPrice, 
+                    userId: customerPhone // Optional metadata
+                }),
+            });
+
+            if (!orderRes.ok) throw new Error("Failed to initiate payment");
+            const order = await orderRes.json();
+
+            // 3. Open Razorpay Modal
+            const options = {
+                key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID, 
+                amount: order.amount,
+                currency: "INR",
+                name: shop.name,
+                description: selectedServiceName,
+                order_id: order.id,
+                handler: async function (response: any) {
+                    // 4. Payment Success -> Create Booking
+                    // We pass the payment ID so the backend can link it
+                    await createBooking(response.razorpay_payment_id, response.razorpay_order_id);
+                },
+                prefill: {
+                    name: customerName,
+                    contact: customerPhone,
+                },
+                theme: {
+                    color: "#4F46E5", // Indigo-600 to match your theme
+                },
+                // Force UPI intent flow on mobile
+                method: {
+                    upi: true,
+                    card: true,
+                    netbanking: true,
+                    wallet: true,
+                }
+            };
+
+            const rzp = new (window as any).Razorpay(options);
+            
+            rzp.on("payment.failed", function (response: any) {
+                alert("Payment Failed: " + response.error.description);
+                setSubmitting(false);
+            });
+
+            rzp.open();
+
         } catch (err: any) {
-            console.error('Booking error:', err)
-            setError(err.message)
-        } finally {
-            setSubmitting(false)
+            console.error("Payment Init Error:", err);
+            setError(err.message || "Something went wrong");
+            setSubmitting(false);
         }
     }
 
+    const createBooking = async (paymentId: string, orderId: string) => {
+        try {
+            const res = await fetch('/api/bookings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    barber_id: barberId,
+                    service_ids: serviceIds,
+                    slot_start: selectedSlot,
+                    customer_name: customerName.trim(),
+                    customer_phone: customerPhone.trim(),
+                    date,
+                    timezone_offset: timezoneOffset,
+                    // Payment Details (matching DB schema)
+                    razorpay_payment_id: paymentId,
+                    razorpay_order_id: orderId,
+                    amount: totalPrice * 100 // Convert to paise
+                }),
+            })
+            
+            if (!res.ok) throw new Error('Booking failed after payment')
 
-    const createBookingWithoutPayment = async () => {
-        const res = await fetch('/api/bookings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                barber_id: barberId,
-                service_ids: serviceIds,
-                slot_start: selectedSlot,
-                customer_name: customerName.trim(),
-                customer_phone: customerPhone.trim(),
-                date,
-                timezone_offset: timezoneOffset,
-            }),
-        })
-        const body = await res.json().catch(() => ({}))
-        if (!res.ok) {
-            throw new Error(body.error || 'Booking failed')
+            // Success Redirect
+            const selectedBarber = barbers.find(b => b.id === barberId)
+            const bookingParams = new URLSearchParams({
+                shop: shop.name,
+                barber: selectedBarber?.name || '',
+                services: selectedServiceName,
+                duration: String(totalDuration),
+                date: date,
+                time: selectedSlot,
+                customer: customerName.trim(),
+                phone: customerPhone.trim(),
+                payment_id: paymentId
+            })
+            router.push(`/booking-confirmed?${bookingParams.toString()}`)
+
+        } catch (err) {
+            alert("Payment successful but booking creation failed. Please contact support.");
+            setSubmitting(false);
         }
-        
-        // Redirect to confirmation page with booking details
-        const selectedBarber = barbers.find(b => b.id === barberId)
-        const bookingParams = new URLSearchParams({
-            shop: shop.name,
-            barber: selectedBarber?.name || '',
-            services: selectedServiceName,
-            duration: String(totalDuration),
-            date: date,
-            time: selectedSlot,
-            customer: customerName.trim(),
-            phone: customerPhone.trim()
-        })
-        router.push(`/booking-confirmed?${bookingParams.toString()}`)
     }
 
     const formatSlot = (iso: string) => {
-        const d = new Date(iso)
-        // Display in local timezone with indication it's UTC-based
-        const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
-        return timeStr
+        return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
     }
 
     return (
-        <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 md:p-6 space-y-6 max-w-full">
-            {/* Step Header */}
+        <form onSubmit={handlePaymentAndBooking} className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 md:p-6 space-y-6 max-w-full">
+            
+            {/* Load Razorpay Script */}
+            <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
+
+            {/* ... EXISTING STEP HEADER (No changes) ... */}
             <ol className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-gray-600 overflow-x-auto no-scrollbar" aria-label="Steps">
                 <li className={step >= 1 ? 'text-indigo-600 font-medium whitespace-nowrap' : 'whitespace-nowrap'}>1. Barber</li>
                 <span className="text-gray-300">/</span>
@@ -202,6 +241,8 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                 <li className={step >= 5 ? 'text-indigo-600 font-medium whitespace-nowrap' : 'whitespace-nowrap'}>5. Payment</li>
             </ol>
 
+            {/* ... STEP 1, 2, 3, 4 (No logic changes, just paste your existing sections here) ... */}
+            
             {/* Step 1: Select Barber */}
             <section aria-labelledby="step-barber">
                 <h2 id="step-barber" className="text-lg font-medium text-gray-900 mb-3">Select Barber</h2>
@@ -212,15 +253,9 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                             <button
                                 key={b.id}
                                 type="button"
-                                onClick={() => {
-                                    setBarberId(b.id)
-                                    setStep(2)
-                                }}
-                                aria-pressed={selected}
+                                onClick={() => { setBarberId(b.id); setStep(2) }}
                                 className={`whitespace-nowrap px-4 py-2 rounded-full border text-sm transition-colors ${
-                                    selected
-                                        ? 'bg-indigo-600 text-white border-indigo-600'
-                                        : 'bg-white text-gray-800 border-gray-300 hover:border-gray-400'
+                                    selected ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-800 border-gray-300 hover:border-gray-400'
                                 }`}
                             >
                                 {b.name}
@@ -230,29 +265,18 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                 </div>
             </section>
 
-            {/* Step 2: Select Service(s) */}
+            {/* Step 2: Select Service */}
             <section aria-labelledby="step-service">
                 <div className="flex items-center justify-between mb-3">
                     <h2 id="step-service" className="text-lg font-medium text-gray-900">Select Service(s)</h2>
-                    {serviceIds.length > 0 && (
-                        <span className="text-sm text-indigo-600 font-medium">
-                            {serviceIds.length} selected
-                        </span>
-                    )}
+                    {serviceIds.length > 0 && <span className="text-sm text-indigo-600 font-medium">{serviceIds.length} selected</span>}
                 </div>
-                
-                {/* Scrollable container with max height */}
                 <div className="border border-gray-200 rounded-lg max-h-64 overflow-y-auto">
                     <div className="divide-y divide-gray-200">
                         {services.map((s) => {
                             const selected = serviceIds.includes(s.id)
                             return (
-                                <label
-                                    key={s.id}
-                                    className={`flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-50 transition-colors ${
-                                        selected ? 'bg-indigo-50' : ''
-                                    }`}
-                                >
+                                <label key={s.id} className={`flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-50 transition-colors ${selected ? 'bg-indigo-50' : ''}`}>
                                     <input
                                         type="checkbox"
                                         checked={selected}
@@ -268,27 +292,13 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                                     />
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-medium text-gray-900 truncate">{s.name}</p>
-                                        <p className="text-xs text-gray-600">
-                                            {s.duration_minutes} mins • ₹{s.price}
-                                        </p>
+                                        <p className="text-xs text-gray-600">{s.duration_minutes} mins • ₹{s.price}</p>
                                     </div>
                                 </label>
                             )
                         })}
                     </div>
                 </div>
-
-                {/* Show selected services summary */}
-                {serviceIds.length > 0 && (
-                    <div className="mt-3 bg-indigo-50 border border-indigo-200 rounded-lg p-3">
-                        <p className="text-sm font-medium text-indigo-900 mb-1">
-                            {selectedServiceName}
-                        </p>
-                        <p className="text-xs text-indigo-700">
-                            Total: {totalDuration} mins
-                        </p>
-                    </div>
-                )}
             </section>
 
             {/* Step 3: Select Date & Time */}
@@ -306,29 +316,19 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                             max={maxDateStr}
                         />
                     </label>
-
                     <div>
                         <span className="block text-sm font-medium text-gray-700 mb-2">Available time slots</span>
                         <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
                             {slotsLoading && <span className="text-sm text-gray-500">Loading…</span>}
-                            {!slotsLoading && date && slots.length === 0 && (
-                                <span className="text-sm text-gray-500">No slots</span>
-                            )}
+                            {!slotsLoading && date && slots.length === 0 && <span className="text-sm text-gray-500">No slots</span>}
                             {!slotsLoading && slots.map((slot) => {
                                 const sel = selectedSlot === slot.start
                                 return (
                                     <button
                                         key={slot.start}
                                         type="button"
-                                        onClick={() => {
-                                            setSelectedSlot(slot.start)
-                                            setStep(4)
-                                        }}
-                                        className={`px-3 py-2 rounded-lg border text-sm transition-colors ${
-                                            sel
-                                                ? 'bg-indigo-600 text-white border-indigo-600'
-                                                : 'bg-white text-gray-900 border-gray-300 hover:border-gray-400'
-                                        }`}
+                                        onClick={() => { setSelectedSlot(slot.start); setStep(4) }}
+                                        className={`px-3 py-2 rounded-lg border text-sm transition-colors ${sel ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-900 border-gray-300 hover:border-gray-400'}`}
                                     >
                                         {formatSlot(slot.start)}
                                     </button>
@@ -345,59 +345,50 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <label className="block">
                         <span className="block text-sm font-medium text-gray-700 mb-1">Name</span>
-                        <input
-                            type="text"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                            value={customerName}
-                            onChange={(e) => setCustomerName(e.target.value)}
-                            placeholder="Your name"
-                        />
+                        <input type="text" className="w-full px-3 py-2 border border-gray-300 rounded-lg" value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Your name" />
                     </label>
                     <label className="block">
                         <span className="block text-sm font-medium text-gray-700 mb-1">Phone number</span>
-                        <input
-                            type="tel"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                            value={customerPhone}
-                            onChange={(e) => setCustomerPhone(e.target.value)}
-                            placeholder="Your phone"
-                        />
+                        <input type="tel" className="w-full px-3 py-2 border border-gray-300 rounded-lg" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="Your phone" />
                     </label>
                 </div>
             </section>
 
-            {/* Step 5: Payment */}
+            {/* Step 5: Payment Summary (UPDATED) */}
             <section aria-labelledby="step-payment">
-                <h2 id="step-payment" className="text-lg font-medium text-gray-900 mb-3">Payment</h2>
+                <h2 id="step-payment" className="text-lg font-medium text-gray-900 mb-3">Payment Summary</h2>
                 <div className="space-y-3">
                     <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                        <span className="text-sm text-gray-600">Selected service</span>
+                        <span className="text-sm text-gray-600">Service</span>
                         <span className="text-sm font-medium text-gray-900">{selectedServiceName || '—'}</span>
                     </div>
                     <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                        <span className="text-sm text-gray-600">Estimated time</span>
+                        <span className="text-sm text-gray-600">Total Duration</span>
                         <span className="text-sm font-medium text-gray-900">{totalDuration} mins</span>
                     </div>
-                    <div className="flex justify-between items-center p-3 bg-indigo-50 rounded-lg border border-indigo-200">
-                        <span className="text-sm text-gray-700">Advance payment required</span>
-                        <span className="text-sm font-medium text-indigo-700">₹0</span>
+                    
+                    {/* TOTAL PRICE DISPLAY */}
+                    <div className="flex justify-between items-center p-4 bg-indigo-50 rounded-lg border border-indigo-200">
+                        <span className="text-base font-semibold text-gray-800">Total Payable</span>
+                        <span className="text-lg font-bold text-indigo-700">₹{totalPrice}</span>
                     </div>
-                    <p className="text-xs text-gray-600">This amount will be adjusted in your final bill.</p>
+                    <p className="text-xs text-center text-gray-500 mt-2">
+                        Secure payment via Razorpay (UPI, Cards, Netbanking)
+                    </p>
                 </div>
             </section>
 
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            {success && <p className="text-sm text-emerald-600">{success}</p>}
+            {error && <p className="text-sm text-red-600 text-center">{error}</p>}
 
-            {/* Mobile sticky CTA */}
-            <div className="md:static fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
-                <div className="max-w-2xl mx-auto p-4">
+            {/* CTA Button */}
+            <div className="md:static fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 md:p-0 md:border-0 z-50">
+                <div className="max-w-2xl mx-auto">
                     <button
                         type="submit"
                         disabled={submitting || !barberId || serviceIds.length === 0 || !selectedSlot || !customerName || !customerPhone}
-                        className="w-full py-3 px-4 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full py-3 px-4 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg md:shadow-none"
                     >
-                        {submitting ? 'Booking…' : 'Confirm Booking'}
+                        {submitting ? 'Processing Payment...' : `Pay ₹${totalPrice} & Confirm`}
                     </button>
                 </div>
             </div>

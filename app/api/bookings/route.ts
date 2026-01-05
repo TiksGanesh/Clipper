@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServiceSupabaseClient } from '@/lib/supabase'
 import { computeAvailableSlots, getUtcDayRange } from '@/lib/slots'
 import { checkSubscriptionAccess } from '@/lib/subscription-access'
+import type { Database } from '@/types/database'
 
 export async function POST(req: Request) {
     const supabase = createServiceSupabaseClient()
@@ -15,6 +16,9 @@ export async function POST(req: Request) {
         customer_phone?: string
         date?: string
         timezone_offset?: number
+        razorpay_payment_id?: string
+        razorpay_order_id?: string
+        amount?: number
     }
 
     try {
@@ -23,7 +27,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
     }
 
-    const { barber_id, service_id, service_ids, slot_start, customer_name, customer_phone, date, timezone_offset } = body
+    const { barber_id, service_id, service_ids, slot_start, customer_name, customer_phone, date, timezone_offset, razorpay_payment_id, razorpay_order_id, amount } = body
 
     if (!barber_id || !slot_start || !customer_name || !customer_phone || !date) {
         return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -223,6 +227,27 @@ export async function POST(req: Request) {
 
     if (!bookingId) {
         return NextResponse.json({ error: 'Booking not created' }, { status: 500 })
+    }
+
+    // Create payment record if payment details are provided
+    if (razorpay_order_id && amount !== undefined) {
+        const paymentInsert: Database['public']['Tables']['payments']['Insert'] = {
+            booking_id: bookingId,
+            razorpay_order_id: razorpay_order_id,
+            razorpay_payment_id: razorpay_payment_id || null,
+            amount: amount,
+            status: razorpay_payment_id ? 'paid' : 'created'
+        }
+        
+        const { error: paymentError } = await (supabase as any)
+            .from('payments')
+            .insert(paymentInsert)
+
+        if (paymentError) {
+            console.error('Failed to create payment record:', paymentError)
+            // Note: Booking is already created, so we don't rollback
+            // The payment webhook will handle updates if needed
+        }
     }
 
     return NextResponse.json({ booking_id: bookingId })
