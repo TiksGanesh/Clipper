@@ -118,7 +118,7 @@ export default function BookingForm({ shop, barbers, services }: Props) {
         try {
             // 2. Create Order on Backend
             // We send the total price to the backend to create a Razorpay Order
-            const orderRes = await fetch("/api/payment", {
+            const orderRes = await fetch("/api/payments", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ 
