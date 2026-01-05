@@ -174,7 +174,12 @@ export default function BookingForm({ shop, barbers, services }: Props) {
             rzp.on("payment.failed", function (response: any) {
                 const message = response?.error?.description || 'Payment failed'
                 setSubmitting(false)
-                try { rzp.close() } catch (_) {}
+                
+                // FORCE REMOVE: Manually remove the Razorpay iframe/container from the DOM
+                const rzpContainer = document.querySelector('.razorpay-container');
+                if (rzpContainer) {
+                    rzpContainer.remove();
+                }
 
                 const failedParams = new URLSearchParams({
                     status: 'failed',
