@@ -32,14 +32,15 @@ export default async function DashboardServicesPage() {
 
     const { data: services, error } = await supabase
         .from('services')
-        .select('id, name, duration_minutes, is_active')
+        .select('id, name, duration_minutes, price, is_active')
         .eq('shop_id', shopId)
         .is('deleted_at', null)
         .order('created_at', { ascending: true }) as { 
             data: Array<{ 
                 id: string; 
                 name: string; 
-                duration_minutes: number; 
+                duration_minutes: number;
+                price: number;
                 is_active: boolean 
             }> | null; 
             error: any 
@@ -57,6 +58,9 @@ export default async function DashboardServicesPage() {
         id: svc.id,
         name: svc.name,
         duration: svc.duration_minutes,
+        price: svc.price || 0,
+        advanceAmount: 0, // TODO: will be populated once DB migration is applied
+        requiresAdvance: false, // TODO: will be populated once DB migration is applied
         isActive: svc.is_active,
     }))
 

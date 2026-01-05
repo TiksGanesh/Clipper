@@ -8,6 +8,9 @@ type Service = {
     id: string
     name: string
     duration: number
+    price: number
+    advanceAmount: number
+    requiresAdvance: boolean
     isActive: boolean
 }
 
@@ -20,6 +23,11 @@ type Props = {
 type ModalMode = 'add' | 'edit' | null
 
 const DURATION_OPTIONS = [15, 30, 45, 60, 90, 120, 150, 180, 240, 300, 360]
+
+function formatPrice(priceInRupees: number): string {
+    if (priceInRupees === 0) return 'Free'
+    return `₹${priceInRupees.toFixed(0)}`
+}
 
 function formatDuration(minutes: number): string {
     if (minutes <= 60) {
@@ -39,6 +47,9 @@ export default function ManageServicesClient({ services, userEmail, errorMessage
 
     const [name, setName] = useState('')
     const [duration, setDuration] = useState<number>(30)
+    const [price, setPrice] = useState<number>(0)
+    const [advanceAmount, setAdvanceAmount] = useState<number>(0)
+    const [requiresAdvance, setRequiresAdvance] = useState<boolean>(false)
 
     const sortedServices = useMemo(() => items, [items])
 
@@ -47,6 +58,9 @@ export default function ManageServicesClient({ services, userEmail, errorMessage
         setEditing(null)
         setName('')
         setDuration(30)
+        setPrice(0)
+        setAdvanceAmount(0)
+        setRequiresAdvance(false)
         setError('')
     }
 
@@ -55,6 +69,9 @@ export default function ManageServicesClient({ services, userEmail, errorMessage
         setEditing(svc)
         setName(svc.name)
         setDuration(svc.duration)
+        setPrice(svc.price)
+        setAdvanceAmount(svc.advanceAmount)
+        setRequiresAdvance(svc.requiresAdvance)
         setError('')
     }
 
@@ -82,7 +99,9 @@ export default function ManageServicesClient({ services, userEmail, errorMessage
                 const formData = new FormData()
                 formData.append('name', name.trim())
                 formData.append('duration', duration.toString())
-                formData.append('price', '0')
+                formData.append('price', price.toString())
+                formData.append('advance_amount', advanceAmount.toString())
+                formData.append('requires_advance', requiresAdvance ? 'on' : 'off')
                 await createServiceAction(formData)
                 // Refresh the page to show the new service
                 window.location.reload()
@@ -93,7 +112,9 @@ export default function ManageServicesClient({ services, userEmail, errorMessage
                 formData.append('id', editing.id)
                 formData.append('name', name.trim())
                 formData.append('duration', duration.toString())
-                formData.append('price', '0')
+                formData.append('price', price.toString())
+                formData.append('advance_amount', advanceAmount.toString())
+                formData.append('requires_advance', requiresAdvance ? 'on' : 'off')
                 formData.append('is_active', editing.isActive ? 'on' : 'off')
                 await updateServiceAction(formData)
                 // Refresh the page to show updated service
@@ -118,7 +139,9 @@ export default function ManageServicesClient({ services, userEmail, errorMessage
             formData.append('id', id)
             formData.append('name', service.name)
             formData.append('duration', service.duration.toString())
-            formData.append('price', '0')
+            formData.append('price', service.price.toString())
+            formData.append('advance_amount', service.advanceAmount.toString())
+            formData.append('requires_advance', service.requiresAdvance ? 'on' : 'off')
             formData.append('is_active', (!service.isActive) ? 'on' : 'off')
             await updateServiceAction(formData)
             // Refresh the page to show updated status
@@ -218,7 +241,15 @@ export default function ManageServicesClient({ services, userEmail, errorMessage
                                             {service.isActive ? 'Active' : 'Disabled'}
                                         </span>
                                     </div>
-                                    <p className="text-sm text-gray-700">Duration: {formatDuration(service.duration)}</p>
+                                    <div className="space-y-1 text-sm text-gray-700">
+                                        <p>Duration: {formatDuration(service.duration)}</p>
+                                        <p>Price: {formatPrice(service.price)}</p>
+                                        {service.requiresAdvance && (
+                                            <p className="text-amber-700">
+                                                Advance: {formatPrice(service.advanceAmount)} required
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
 
                                 <div className="flex flex-wrap gap-2">
@@ -310,6 +341,58 @@ export default function ManageServicesClient({ services, userEmail, errorMessage
                                         ))}
                                     </select>
                                 </label>
+
+                                <label className="space-y-1 block">
+                                    <span className="text-sm font-medium text-gray-800">Price (₹)</span>
+                                    <input
+                                        type="number"
+                                        value={price}
+                                        onChange={(e) => setPrice(Math.max(0, Number(e.target.value)))}
+                                        placeholder="0"
+                                        min="0"
+                                        disabled={isLoading}
+                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                    />
+                                    <p className="text-xs text-gray-500">Service cost shown to customers</p>
+                                </label>
+
+                                <div className="border-t pt-4 space-y-3">
+                                    <label className="flex items-center gap-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={requiresAdvance}
+                                            onChange={(e) => {
+                                                setRequiresAdvance(e.target.checked)
+                                                if (!e.target.checked) {
+                                                    setAdvanceAmount(0)
+                                                }
+                                            }}
+                                            disabled={isLoading}
+                                            className="w-4 h-4 border border-gray-300 rounded cursor-pointer disabled:cursor-not-allowed"
+                                        />
+                                        <span className="text-sm font-medium text-gray-800">Require advance payment</span>
+                                    </label>
+
+                                    {requiresAdvance && (
+                                        <label className="space-y-1 block">
+                                            <span className="text-sm font-medium text-gray-800">Advance Amount (₹)</span>
+                                            <input
+                                                type="number"
+                                                value={advanceAmount}
+                                                onChange={(e) => setAdvanceAmount(Math.max(0, Number(e.target.value)))}
+                                                placeholder="0"
+                                                min="0"
+                                                max={price}
+                                                disabled={isLoading}
+                                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                            />
+                                            <p className="text-xs text-gray-500">Amount customer must pay upfront</p>
+                                        </label>
+                                    )}
+                                    <p className="text-xs text-amber-600 mt-2">
+                                        Note: Advance payment will be stored once the database is updated.
+                                    </p>
+                                </div>
                             </div>
 
                             <div className="space-y-2">

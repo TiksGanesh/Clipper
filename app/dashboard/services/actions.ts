@@ -48,7 +48,7 @@ export async function createServiceAction(formData: FormData) {
 
     const { error } = await supabase
         .from('services')
-        // @ts-expect-error - Supabase type inference issue
+        // @ts-expect-error - Supabase dynamic columns
         .insert({
             shop_id: shopId,
             name,
@@ -85,7 +85,7 @@ export async function updateServiceAction(formData: FormData) {
 
     const { error } = await supabase
         .from('services')
-        // @ts-expect-error - Supabase type inference issue
+        // @ts-expect-error - Supabase dynamic columns
         .update({
             name,
             duration_minutes: durationMinutes,
