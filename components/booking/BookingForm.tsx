@@ -190,7 +190,10 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                     phone: customerPhone.trim(),
                 })
 
-                router.push(`/booking-confirmed?${failedParams.toString()}`)
+                // Delay navigation slightly to allow the Razorpay modal to close
+                setTimeout(() => {
+                    router.push(`/booking-confirmed?${failedParams.toString()}`)
+                }, 50)
             })
 
             rzp.open()
