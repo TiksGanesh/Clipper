@@ -117,7 +117,6 @@ export default function BookingForm({ shop, barbers, services }: Props) {
 
         try {
             // 2. Create Order on Backend
-            // We send the total price to the backend to create a Razorpay Order
             const orderRes = await fetch("/api/payments", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -125,14 +124,20 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                     amount: totalPrice, 
                     userId: customerPhone // Optional metadata
                 }),
-            });
+            })
 
-            if (!orderRes.ok) throw new Error("Failed to initiate payment");
-            const order = await orderRes.json();
+            if (!orderRes.ok) throw new Error("Failed to initiate payment")
+            const order = await orderRes.json()
+
+            const razorpayKeyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
+            if (!razorpayKeyId) {
+                setSubmitting(false)
+                return setError('Payments are not configured right now. Please contact the shop.')
+            }
 
             // 3. Open Razorpay Modal
             const options = {
-                key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID, 
+                key: razorpayKeyId,
                 amount: order.amount,
                 currency: "INR",
                 name: shop.name,
@@ -140,15 +145,14 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                 order_id: order.id,
                 handler: async function (response: any) {
                     // 4. Payment Success -> Create Booking
-                    // We pass the payment ID so the backend can link it
-                    await createBooking(response.razorpay_payment_id, response.razorpay_order_id);
+                    await createBooking(response.razorpay_payment_id, response.razorpay_order_id)
                 },
                 prefill: {
                     name: customerName,
                     contact: customerPhone,
                 },
                 theme: {
-                    color: "#4F46E5", // Indigo-600 to match your theme
+                    color: "#4F46E5",
                 },
                 // Force UPI intent flow on mobile
                 method: {
@@ -156,22 +160,45 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                     card: true,
                     netbanking: true,
                     wallet: true,
+                },
+                modal: {
+                    ondismiss: () => {
+                        setSubmitting(false)
+                        setError('Payment was cancelled')
+                    }
                 }
-            };
+            }
 
-            const rzp = new (window as any).Razorpay(options);
+            const rzp = new (window as any).Razorpay(options)
             
             rzp.on("payment.failed", function (response: any) {
-                alert("Payment Failed: " + response.error.description);
-                setSubmitting(false);
-            });
+                const message = response?.error?.description || 'Payment failed'
+                setSubmitting(false)
+                try { rzp.close() } catch (_) {}
 
-            rzp.open();
+                const failedParams = new URLSearchParams({
+                    status: 'failed',
+                    error: message,
+                    shop: shop.name,
+                    shop_id: shop.id,
+                    barber: barbers.find(b => b.id === barberId)?.name || '',
+                    services: selectedServiceName,
+                    duration: String(totalDuration),
+                    date,
+                    time: selectedSlot,
+                    customer: customerName.trim(),
+                    phone: customerPhone.trim(),
+                })
+
+                router.push(`/booking-confirmed?${failedParams.toString()}`)
+            })
+
+            rzp.open()
 
         } catch (err: any) {
-            console.error("Payment Init Error:", err);
-            setError(err.message || "Something went wrong");
-            setSubmitting(false);
+            console.error("Payment Init Error:", err)
+            setError(err.message || "Something went wrong")
+            setSubmitting(false)
         }
     }
 
@@ -200,7 +227,9 @@ export default function BookingForm({ shop, barbers, services }: Props) {
             // Success Redirect
             const selectedBarber = barbers.find(b => b.id === barberId)
             const bookingParams = new URLSearchParams({
+                status: 'success',
                 shop: shop.name,
+                shop_id: shop.id,
                 barber: selectedBarber?.name || '',
                 services: selectedServiceName,
                 duration: String(totalDuration),
@@ -212,9 +241,24 @@ export default function BookingForm({ shop, barbers, services }: Props) {
             })
             router.push(`/booking-confirmed?${bookingParams.toString()}`)
 
-        } catch (err) {
-            alert("Payment successful but booking creation failed. Please contact support.");
-            setSubmitting(false);
+        } catch (err: any) {
+            const selectedBarber = barbers.find(b => b.id === barberId)
+            const failureParams = new URLSearchParams({
+                status: 'failed',
+                error: 'Payment captured but booking creation failed. Please contact support.',
+                shop: shop.name,
+                shop_id: shop.id,
+                barber: selectedBarber?.name || '',
+                services: selectedServiceName,
+                duration: String(totalDuration),
+                date: date,
+                time: selectedSlot,
+                customer: customerName.trim(),
+                phone: customerPhone.trim(),
+                payment_id: paymentId
+            })
+            router.push(`/booking-confirmed?${failureParams.toString()}`)
+            setSubmitting(false)
         }
     }
 
