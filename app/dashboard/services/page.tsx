@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { requireAuth } from '@/lib/auth'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import ManageServicesClient from '@/components/dashboard/ManageServicesClient'

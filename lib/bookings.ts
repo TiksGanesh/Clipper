@@ -60,7 +60,7 @@ export async function fetchBarberBookings(params: FetchParams): Promise<BarberCa
     let query = supabase
         .from('bookings')
         .select(
-            'id, start_time, end_time, status, customer_name, customer_phone, is_walk_in, services!inner ( name )'
+            'id, start_time, end_time, status, customer_name, customer_phone, is_walk_in, notes, services!inner ( name )'
         )
         .eq('barber_id', barberId)
         .is('deleted_at', null)
@@ -87,6 +87,7 @@ export async function fetchBarberBookings(params: FetchParams): Promise<BarberCa
         customer_name: booking.customer_name,
         customer_phone: booking.customer_phone,
         is_walk_in: booking.is_walk_in,
+        is_block: booking.notes === 'BREAK',
         service_name: booking.services?.name ?? 'Unknown service',
     }))
 }

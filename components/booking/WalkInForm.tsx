@@ -27,11 +27,13 @@ type Props = {
     shopPhone?: string
     shopName?: string
     onSuccess?: (bookingId: string) => void
+    initialBarberId?: string
+    initialStartTime?: string
 }
 
-export default function WalkInForm({ shopId, barbers, services, shopPhone, shopName, onSuccess }: Props) {
+export default function WalkInForm({ shopId, barbers, services, shopPhone, shopName, onSuccess, initialBarberId, initialStartTime }: Props) {
     const router = useRouter()
-    const [barberId, setBarberId] = useState(barbers[0]?.id ?? '')
+    const [barberId, setBarberId] = useState(initialBarberId ?? barbers[0]?.id ?? '')
     const [serviceId, setServiceId] = useState(services[0]?.id ?? '')
     const [availableSlots, setAvailableSlots] = useState<Slot[]>([])
     const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null)
@@ -45,11 +47,25 @@ export default function WalkInForm({ shopId, barbers, services, shopPhone, shopN
 
     const selectedService = services.find(s => s.id === serviceId)
 
-    // Fetch available slots (up to 2 immediate slots)
+    // Fetch available slots or use preselected slot from query
     useEffect(() => {
         if (!barberId || !serviceId) {
             setAvailableSlots([])
             setSelectedSlot(null)
+            return
+        }
+
+        // If a start time is provided from the calendar, prefill that slot
+        if (initialStartTime) {
+            const dur = selectedService?.duration_minutes || 0
+            const start = new Date(initialStartTime)
+            const end = new Date(start)
+            end.setMinutes(end.getMinutes() + dur)
+            const slot = { start: start.toISOString(), end: end.toISOString() }
+            setSlotsLoading(false)
+            setError('')
+            setSelectedSlot(slot)
+            setAvailableSlots([slot])
             return
         }
 
@@ -95,7 +111,7 @@ export default function WalkInForm({ shopId, barbers, services, shopPhone, shopN
 
         fetchSlots()
         return () => controller.abort()
-    }, [barberId, serviceId, timezoneOffset])
+    }, [barberId, serviceId, timezoneOffset, initialStartTime, selectedService?.duration_minutes])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()

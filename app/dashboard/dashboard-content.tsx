@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useState } from 'react'
 
 type Barber = {
     id: string
@@ -20,13 +21,15 @@ type Props = {
     setupStatus: SetupStatus
     barberCount: number
     serviceCount: number
+    todayRevenue?: number
 }
 
-export default function DashboardContent({ barbers = [], setupStatus, barberCount = 0, serviceCount = 0 }: Props) {
+export default function DashboardContent({ barbers = [], setupStatus, barberCount = 0, serviceCount = 0, todayRevenue = 0 }: Props) {
     // Determine if there are setup improvements possible
     const canAddBarber = barberCount === 1 // Can add second barber
     const needsMoreServices = serviceCount < 3 // Suggest adding more services for variety
     const hasSetupSuggestions = canAddBarber || needsMoreServices
+    const [showRevenue, setShowRevenue] = useState(false)
 
     return (
         <div className="space-y-4">
@@ -70,13 +73,24 @@ export default function DashboardContent({ barbers = [], setupStatus, barberCoun
 
             {/* Quick Actions */}
             <div className="bg-white rounded-lg shadow-sm p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
+                    <button
+                        type="button"
+                        onClick={() => setShowRevenue((v) => !v)}
+                        className="px-2 py-1 bg-indigo-800 text-emerald-300 font-mono border border-indigo-700 rounded-full"
+                        aria-label="Toggle revenue visibility"
+                        title="Toggle revenue visibility"
+                    >
+                        {`Today: ₹${showRevenue ? Number(todayRevenue).toLocaleString('en-IN') : '****'}`}
+                    </button>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="space-y-2">
                         <label className="text-sm font-medium text-gray-700">Bookings</label>
                         <a
                             href="/dashboard/walk-in"
-                            className="flex items-center justify-center w-full px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition font-medium text-sm"
+                            className="hidden md:flex items-center justify-center w-full px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition font-medium text-sm"
                         >
                             + Walk-In Booking
                         </a>

@@ -53,15 +53,13 @@ export default function LoginPage() {
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8 overflow-x-hidden">
-            <div className="w-full max-w-sm">
+            <div className="w-full max-w-md mx-4">
                 {/* Card */}
-                <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-6">
+                <div className="w-full bg-white border border-gray-100 rounded-2xl shadow-sm p-6 md:p-8 space-y-6">
                     {/* Header */}
-                    <div className="space-y-2 text-center">
-                        <h1 className="text-xl font-semibold text-gray-900">
-                            Sign in to your account
-                        </h1>
-                        <p className="text-sm text-gray-600">
+                    <div className="text-center">
+                        <h1 className="text-2xl font-black text-gray-900">Sign in</h1>
+                        <p className="text-sm text-gray-500 mt-2 mb-8">
                             Manage your barber shop bookings
                         </p>
                     </div>
@@ -77,25 +75,26 @@ export default function LoginPage() {
                     <form className="space-y-4" onSubmit={handleLogin}>
                         {/* Email Field */}
                         <div>
-                            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                            <label htmlFor="email" className="block text-sm font-bold text-gray-700 mb-1">
                                 Email address
                             </label>
                             <input
                                 id="email"
                                 name="email"
                                 type="email"
+                                inputMode="email"
                                 autoComplete="email"
                                 required
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 placeholder="you@example.com"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                className="w-full px-4 py-3 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                             />
                         </div>
 
                         {/* Password Field */}
                         <div>
-                            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                            <label htmlFor="password" className="block text-sm font-bold text-gray-700 mb-1">
                                 Password
                             </label>
                             <input
@@ -107,7 +106,7 @@ export default function LoginPage() {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder="••••••••"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                className="w-full px-4 py-3 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                             />
                         </div>
 
@@ -115,7 +114,7 @@ export default function LoginPage() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full py-3 px-4 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="w-full py-4 px-4 bg-indigo-600 text-white rounded-xl font-bold text-lg shadow-lg hover:bg-indigo-700 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                         >
                             {loading ? 'Signing in...' : 'Sign in'}
                         </button>

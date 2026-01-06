@@ -175,41 +175,27 @@ export default function ManageServicesClient({ services, userEmail, errorMessage
 
     return (
         <div className="min-h-screen bg-gray-50">
-            <nav className="bg-white shadow">
-                <div className="max-w-7xl mx-auto px-4">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-3 sm:py-0 sm:h-16 gap-2 sm:gap-4">
-                        <Link href="/dashboard" className="text-base sm:text-xl font-bold text-gray-900 hover:text-gray-700">
-                            ← Back
-                        </Link>
-                        <div className="flex items-center gap-2 sm:gap-4 text-sm">
-                            <span className="text-gray-600 truncate max-w-[150px] sm:max-w-none">{userEmail}</span>
-                            <form action="/api/auth/signout" method="POST">
-                                <button
-                                    type="submit"
-                                    className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition"
-                                >
-                                    Sign Out
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </nav>
+            {/* Compact Sticky Header */}
+            <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3">
+                <Link href="/dashboard" className="p-1 hover:bg-gray-100 rounded-lg transition-colors" aria-label="Back to Dashboard">
+                    <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                </Link>
+                <h1 className="flex-1 text-lg font-bold text-gray-900">Services</h1>
+                <button
+                    type="button"
+                    onClick={openAdd}
+                    className="p-1.5 hover:bg-indigo-50 rounded-lg transition-colors" 
+                    aria-label="Add Service"
+                >
+                    <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                </button>
+            </header>
 
-            <main className="max-w-5xl mx-auto p-4 md:p-6 space-y-6 md:space-y-8">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                    <div>
-                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Services</h1>
-                        <p className="text-sm md:text-base text-gray-600">Services shown to customers during booking.</p>
-                    </div>
-                    <button
-                        type="button"
-                        onClick={openAdd}
-                        className="inline-flex justify-center items-center px-4 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                    >
-                        Add Service
-                    </button>
-                </div>
+            <main className="max-w-5xl mx-auto p-4 space-y-4">
 
                 <section className="space-y-4">
                     {errorMessage && (
@@ -227,57 +213,58 @@ export default function ManageServicesClient({ services, userEmail, errorMessage
                     {sortedServices.map((service) => (
                         <article
                             key={service.id}
-                            className="bg-white border border-gray-200 rounded-lg shadow-sm p-4 md:p-5 flex flex-col gap-3"
+                            className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-3"
                         >
-                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-                                <div className="space-y-1">
-                                    <div className="flex items-center gap-2">
-                                        <h2 className="text-lg font-semibold text-gray-900">{service.name}</h2>
-                                        <span
-                                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                                                service.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-700'
-                                            }`}
-                                        >
-                                            {service.isActive ? 'Active' : 'Disabled'}
-                                        </span>
-                                    </div>
-                                    <div className="space-y-1 text-sm text-gray-700">
-                                        <p>Duration: {formatDuration(service.duration)}</p>
-                                        <p>Price: {formatPrice(service.price)}</p>
-                                        {service.requiresAdvance && (
-                                            <p className="text-amber-700">
-                                                Advance: {formatPrice(service.advanceAmount)} required
-                                            </p>
-                                        )}
-                                    </div>
+                            {/* Content Section */}
+                            <div className="p-4">
+                                <div className="flex items-start justify-between gap-2 mb-2">
+                                    <h2 className="text-lg font-bold text-gray-900">{service.name}</h2>
+                                    <span className="text-lg font-bold text-indigo-600">{formatPrice(service.price)}</span>
                                 </div>
-
-                                <div className="flex flex-wrap gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => toggleActive(service.id)}
-                                        className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                    >
-                                        {service.isActive ? 'Disable' : 'Enable'}
-                                    </button>
+                                <div className="flex items-center gap-1 text-sm font-medium text-gray-500">
+                                    <span>⏱</span>
+                                    <span>{formatDuration(service.duration)}</span>
                                 </div>
+                                {service.requiresAdvance && (
+                                    <p className="text-xs text-amber-700 mt-2">
+                                        Advance: {formatPrice(service.advanceAmount)} required
+                                    </p>
+                                )}
                             </div>
 
-                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2">
+                            {/* Action Footer */}
+                            <div className="bg-gray-50 p-3 flex items-center justify-between border-t border-gray-100">
+                                {/* Status Badge / Toggle Button */}
                                 <button
                                     type="button"
-                                    onClick={() => openEdit(service)}
-                                    className="w-full sm:w-auto px-4 py-2 text-sm font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    onClick={() => toggleActive(service.id)}
+                                    className={`px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-colors ${
+                                        service.isActive
+                                            ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                                            : 'bg-gray-200 text-gray-500 hover:bg-gray-300'
+                                    }`}
+                                    disabled={isLoading}
                                 >
-                                    Edit
+                                    {service.isActive ? '●' : '○'} {service.isActive ? 'Active' : 'Disabled'}
                                 </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setConfirmDelete(service)}
-                                    className="w-full sm:w-auto px-4 py-2 text-sm font-semibold text-red-700 bg-white border border-red-200 rounded-lg hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500"
-                                >
-                                    Delete
-                                </button>
+
+                                {/* Edit & Delete Buttons */}
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => openEdit(service)}
+                                        className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 shadow-sm active:bg-gray-50 transition-all"
+                                    >
+                                        Edit
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setConfirmDelete(service)}
+                                        className="px-4 py-2 bg-white border border-red-200 rounded-lg text-sm font-semibold text-red-600 shadow-sm active:bg-red-50 transition-all"
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
                             </div>
                         </article>
                     ))}

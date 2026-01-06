@@ -6,6 +6,7 @@ import {
     cancelBookingAction,
     markBookingCompletedAction,
     markBookingNoShowAction,
+    createBreakAction,
 } from '@/app/barber/calendar/actions'
 import WeekView from './WeekView'
 import AppointmentDetailSheet from './AppointmentDetailSheet'
@@ -26,6 +27,7 @@ type DayBooking = {
     customer_phone?: string
     status: BookingStatus
     is_walk_in: boolean
+    is_block?: boolean
 }
 
 type WorkingHours = {
@@ -125,12 +127,15 @@ function toDisplayStatus(status: BookingStatus): BookingDisplayStatus {
     }
 }
 
-function bookingStyle(status: BookingDisplayStatus) {
+function bookingStyle(status: BookingDisplayStatus, isBlock?: boolean) {
     const map: Record<BookingDisplayStatus, { bg: string; border: string; text: string; label: string }> = {
         upcoming: { bg: '#e0f2fe', border: '#60a5fa', text: '#0f172a', label: 'Upcoming' },
         completed: { bg: '#dcfce7', border: '#22c55e', text: '#14532d', label: 'Completed' },
         no_show: { bg: '#fef9c3', border: '#facc15', text: '#854d0e', label: 'No Show' },
         canceled: { bg: '#fee2e2', border: '#f87171', text: '#7f1d1d', label: 'Cancelled' },
+    }
+    if (isBlock) {
+        return { bg: '#e5e7eb', border: '#9ca3af', text: '#6b7280', label: 'Break' }
     }
     return map[status]
 }
@@ -164,6 +169,9 @@ export default function DayView({ barbers, initialDate, initialBarberId, isReadO
     const [actionMessage, setActionMessage] = useState<string>('')
     const [actionError, setActionError] = useState<string>('')
     const [isActionPending, startActionTransition] = useTransition()
+    const [isCreateOpen, setIsCreateOpen] = useState(false)
+    const [isBarberPickerOpen, setIsBarberPickerOpen] = useState(false)
+    const [createType, setCreateType] = useState<'client' | 'break'>('client')
 
     useEffect(() => {
         const param = searchParams.get('barber')
@@ -288,6 +296,38 @@ export default function DayView({ barbers, initialDate, initialBarberId, isReadO
         })
     }
 
+    const handleCreateClick = () => {
+        if (!selectedSlot) {
+            setActionError('Select a time slot first')
+            return
+        }
+        setIsCreateOpen(true)
+        setCreateType('client')
+    }
+
+    const handleCreateBreak = () => {
+        setActionMessage('')
+        setActionError('')
+        startActionTransition(async () => {
+            try {
+                await createBreakAction({ barberId: selectedBarberId, startTimeIso: selectedSlot })
+                setIsCreateOpen(false)
+                setSelectedSlot('')
+                const params = new URLSearchParams({ barber_id: selectedBarberId, date: selectedDate })
+                const res = await fetch(`/api/calendar/day?${params.toString()}`)
+                if (!res.ok) {
+                    const body = await res.json().catch(() => ({}))
+                    throw new Error(body.error || 'Failed to refresh')
+                }
+                const body = await res.json()
+                setPayload(body as DayPayload)
+                setActionMessage('Break added')
+            } catch (err: any) {
+                setActionError(err.message || 'Failed to add break')
+            }
+        })
+    }
+
     const dayClosed = payload && (!payload.working_hours || payload.working_hours.is_closed || !payload.working_hours.open_time || !payload.working_hours.close_time)
 
     const handleTodayClick = () => {
@@ -330,19 +370,25 @@ export default function DayView({ barbers, initialDate, initialBarberId, isReadO
                 <h1 className="text-xl font-semibold text-gray-900">Calendar</h1>
                 
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                    {/* Barber Selector */}
-                    <select
-                        value={selectedBarberId}
-                        onChange={(e) => handleBarberChange(e.target.value)}
-                        disabled={isActionPending}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
-                    >
-                        {barbers.map((barber) => (
-                            <option key={barber.id} value={barber.id}>
-                                {barber.name}
-                            </option>
-                        ))}
-                    </select>
+                    {/* Barber Selector Trigger */}
+                    <div className="w-full sm:w-auto mb-6 sm:mb-0">
+                        <button
+                            type="button"
+                            onClick={() => !isActionPending && setIsBarberPickerOpen(true)}
+                            disabled={isActionPending}
+                            className={`w-full bg-white border-2 border-indigo-100 rounded-2xl px-5 py-4 flex items-center justify-between shadow-sm active:scale-[0.98] transition-all ${isActionPending ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            aria-haspopup="dialog"
+                            aria-expanded={isBarberPickerOpen}
+                            aria-label="Select barber"
+                        >
+                            <span className="text-lg font-bold text-gray-900 truncate">
+                                {barbers.find(b => b.id === selectedBarberId)?.name || 'Select Barber'}
+                            </span>
+                            <svg className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clipRule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
 
                     {/* Today Button */}
                     <button
@@ -459,19 +505,20 @@ export default function DayView({ barbers, initialDate, initialBarberId, isReadO
                         <div className="space-y-2">
                             {rows.map((row) => {
                                 if (row.kind === 'booking') {
-                                    const customerLabel = row.booking.customer_name || (row.booking.is_walk_in ? 'Walk-in' : 'Customer')
-                                    const actionsDisabled = isActionPending || isReadOnly || row.displayStatus === 'completed' || row.displayStatus === 'canceled'
-                                    const isExpanded = selectedSlot === row.booking.id
+                                    const customerLabel = row.booking.is_block ? 'Personal Break' : (row.booking.customer_name || (row.booking.is_walk_in ? 'Walk-in' : 'Customer'))
+                                    const actionsDisabled = isActionPending || isReadOnly || row.displayStatus === 'completed' || row.displayStatus === 'canceled' || row.booking.is_block
+                                    const style = bookingStyle(row.displayStatus, row.booking.is_block)
                                     
                                     return (
                                         <div
                                             key={row.booking.id + row.start}
-                                            className="bg-white border border-gray-200 rounded-xl shadow-sm"
+                                            className="border rounded-xl shadow-sm"
+                                            style={{ background: row.booking.is_block ? 'repeating-linear-gradient(45deg, #e5e7eb, #e5e7eb 10px, #f3f4f6 10px, #f3f4f6 20px)' : style.bg, borderColor: style.border }}
                                         >
                                             {/* Main Card Content - Always Visible */}
                                             <button
                                                 type="button"
-                                                onClick={() => setSelectedBooking(row.booking)}
+                                                onClick={() => !row.booking.is_block && setSelectedBooking(row.booking)}
                                                 className="w-full text-left p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-xl"
                                             >
                                                 <div className="flex items-start justify-between gap-2">
@@ -480,25 +527,20 @@ export default function DayView({ barbers, initialDate, initialBarberId, isReadO
                                                             <p className="text-base font-semibold text-gray-900">
                                                                 {formatTimeLabel(row.start)}
                                                             </p>
-                                                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                                                                row.displayStatus === 'upcoming' ? 'bg-blue-100 text-blue-800' :
-                                                                row.displayStatus === 'completed' ? 'bg-emerald-100 text-emerald-800' :
-                                                                row.displayStatus === 'no_show' ? 'bg-red-100 text-red-800' :
-                                                                'bg-gray-100 text-gray-800'
-                                                            }`}>
-                                                                {row.displayStatus === 'upcoming' ? 'Upcoming' :
-                                                                 row.displayStatus === 'completed' ? 'Done' :
-                                                                 row.displayStatus === 'no_show' ? 'No Show' :
-                                                                 'Cancelled'}
+                                                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${row.booking.is_block ? 'bg-gray-200 text-gray-700' : row.displayStatus === 'upcoming' ? 'bg-blue-100 text-blue-800' : row.displayStatus === 'completed' ? 'bg-emerald-100 text-emerald-800' : row.displayStatus === 'no_show' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}`}>
+                                                                {row.booking.is_block ? 'Break' : row.displayStatus === 'upcoming' ? 'Upcoming' : row.displayStatus === 'completed' ? 'Done' : row.displayStatus === 'no_show' ? 'No Show' : 'Cancelled'}
                                                             </span>
                                                         </div>
-                                                        <p className="text-sm font-medium text-gray-900 mt-1 truncate break-words">
-                                                            {row.booking.service_name}
-                                                        </p>
+                                                        {!row.booking.is_block && (
+                                                            <p className="text-sm font-medium text-gray-900 mt-1 truncate break-words">
+                                                                {row.booking.service_name}
+                                                            </p>
+                                                        )}
                                                         <p className="text-xs text-gray-600 mt-0.5">
                                                             {customerLabel}
                                                         </p>
                                                     </div>
+                                                    {!row.booking.is_block && (
                                                     <svg 
                                                         className="w-5 h-5 text-gray-400"
                                                         fill="none" 
@@ -507,6 +549,7 @@ export default function DayView({ barbers, initialDate, initialBarberId, isReadO
                                                     >
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                                     </svg>
+                                                    )}
                                                 </div>
                                             </button>
                                         </div>
@@ -561,9 +604,88 @@ export default function DayView({ barbers, initialDate, initialBarberId, isReadO
                     <button
                         type="button"
                         className="w-full py-3 px-4 text-base font-medium text-white bg-indigo-600 rounded-lg shadow-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors"
+                        onClick={handleCreateClick}
                     >
                         + Add Walk-in
                     </button>
+                </div>
+            )}
+
+            {/* New Entry Creation Sheet */}
+            {isCreateOpen && (
+                <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/30">
+                    <div className="w-full md:max-w-md bg-white rounded-t-2xl md:rounded-2xl shadow-xl p-4">
+                        <div className="flex items-center justify-between mb-3">
+                            <h2 className="text-base font-semibold">New Entry</h2>
+                            <button className="p-2" onClick={() => setIsCreateOpen(false)} aria-label="Close">
+                                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
+                        </div>
+                        <div className="flex mb-4 rounded-lg overflow-hidden border">
+                            <button className={`flex-1 py-2 text-sm ${createType==='client'?'bg-indigo-600 text-white':'bg-white'}`} onClick={() => setCreateType('client')}>Client</button>
+                            <button className={`flex-1 py-2 text-sm ${createType==='break'?'bg-indigo-600 text-white':'bg-white'}`} onClick={() => setCreateType('break')}>Personal/Break</button>
+                        </div>
+
+                        {createType === 'client' ? (
+                            <div className="space-y-2">
+                                <p className="text-sm text-gray-600">Redirect to Walk-in form for details.</p>
+                                <a href={`/dashboard/walk-in?barber_id=${encodeURIComponent(selectedBarberId)}&start_time=${encodeURIComponent(selectedSlot)}`} className="inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md">Go to Walk-in</a>
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                <p className="text-sm text-gray-700">Blocking 30 minutes for break.</p>
+                                <p className="text-xs text-gray-500">Selected: {selectedSlotLabel}</p>
+                                {/* Break counter */}
+                                <p className="text-xs text-gray-600">Breaks used today: {(payload?.bookings.filter(b=> (b as any).is_block).length ?? 0)}/2</p>
+                                <button
+                                    type="button"
+                                    onClick={handleCreateBreak}
+                                    disabled={isActionPending}
+                                    className="w-full py-2 text-sm font-medium text-white bg-gray-700 rounded-md hover:bg-gray-800"
+                                >
+                                    Add Break
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Barber Picker Sheet */}
+            {isBarberPickerOpen && (
+                <div
+                    className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/40 backdrop-blur-sm"
+                    onClick={() => setIsBarberPickerOpen(false)}
+                >
+                    <div
+                        className="w-full md:max-w-md bg-white rounded-t-3xl md:rounded-3xl shadow-xl p-2"
+                        onClick={(e) => e.stopPropagation()}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="Select barber"
+                    >
+                        {barbers.map((barber, idx) => {
+                            const isSelected = barber.id === selectedBarberId
+                            return (
+                                <button
+                                    key={barber.id}
+                                    type="button"
+                                    className={`w-full p-5 text-left text-lg font-semibold border-b border-gray-50 last:border-0 ${isSelected ? 'bg-indigo-50' : 'bg-white'} active:bg-indigo-50 flex items-center justify-between`}
+                                    onClick={() => {
+                                        handleBarberChange(barber.id)
+                                        setIsBarberPickerOpen(false)
+                                    }}
+                                >
+                                    <span className="truncate text-gray-900">{barber.name}</span>
+                                    {isSelected && (
+                                        <svg className="h-5 w-5 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    )}
+                                </button>
+                            )
+                        })}
+                    </div>
                 </div>
             )}
 

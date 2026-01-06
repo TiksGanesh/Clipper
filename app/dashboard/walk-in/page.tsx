@@ -19,7 +19,7 @@ type Service = {
     price: number
 }
 
-export default async function WalkInPage() {
+export default async function WalkInPage({ searchParams }: { searchParams?: Record<string, string> }) {
     const user = await requireAuth()
     const supabase = await createServerSupabaseClient()
 
@@ -59,6 +59,9 @@ export default async function WalkInPage() {
             .order('name'),
     ])
 
+    const initialBarberId = searchParams?.barber_id
+    const initialStartTime = searchParams?.start_time
+
     return (
         <div className="min-h-screen bg-gray-50 overflow-x-hidden">
             <nav className="bg-white shadow">
@@ -93,6 +96,8 @@ export default async function WalkInPage() {
                         services={(services as Service[]) ?? []}
                         shopPhone={shopPhone}
                         shopName={shopName}
+                        initialBarberId={initialBarberId}
+                        initialStartTime={initialStartTime}
                     />
                 </div>
             </main>
