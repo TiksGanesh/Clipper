@@ -139,17 +139,20 @@ export async function createBreakAction(input: { barberId: string; startTimeIso:
     }
 
     // Ensure a 'Break' service exists (30 minutes, price 0, active)
-    const { data: existingBreakService } = await supabase
+    const { data: existingBreakService } = (await supabase
         .from('services')
         .select('id, duration_minutes, is_active, deleted_at')
         .eq('shop_id', barber.shop_id)
         .eq('name', 'Break')
-        .maybeSingle<{ id: string; duration_minutes: number; is_active: boolean; deleted_at: string | null }>()
+        .maybeSingle()) as { data: { id: string; duration_minutes: number; is_active: boolean; deleted_at: string | null } | null }
 
     let breakServiceId = existingBreakService?.id
     if (!breakServiceId || existingBreakService?.deleted_at) {
-        const { data: inserted, error: insertError } = await supabase
+        // Create a fresh client to avoid type pollution from previous queries
+        const insertClient = await createServerActionClient()
+        const { data: inserted, error: insertError } = await insertClient
             .from('services')
+            // @ts-expect-error - supabase types narrowed by previous maybeSingle calls
             .insert({
                 shop_id: barber.shop_id,
                 name: 'Break',
@@ -174,6 +177,7 @@ export async function createBreakAction(input: { barberId: string; startTimeIso:
     // Insert booking directly (status confirmed, notes BREAK)
     const { data: booking, error: bookingError } = await supabase
         .from('bookings')
+        // @ts-expect-error - supabase types narrowed by previous maybeSingle calls
         .insert({
             shop_id: barber.shop_id,
             barber_id: input.barberId,

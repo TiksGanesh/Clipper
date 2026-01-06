@@ -4,6 +4,9 @@ import { computeAvailableSlots, getUtcDayRange } from '@/lib/slots'
 import { isShopClosed } from '@/lib/shop-closure'
 import { checkSubscriptionAccess } from '@/lib/subscription-access'
 
+// Force dynamic rendering for this API route
+export const dynamic = 'force-dynamic'
+
 // Helper to convert minutes since midnight to HH:MM:SS format
 function minutesToTimeString(minutes: number): string {
     const totalMinutes = ((minutes % 1440) + 1440) % 1440 // Normalize to 0-1439
