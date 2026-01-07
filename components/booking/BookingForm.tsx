@@ -133,7 +133,7 @@ export default function BookingForm({ shop, barbers, services }: Props) {
         return () => controller.abort()
     }, [barberId, serviceIds, date, timezoneOffset])
 
-    // --- Payment Logic ---
+    // --- Payment Logic with Soft Lock ---
     const handlePaymentAndBooking = async (e: React.FormEvent) => {
         e.preventDefault()
         setError('')
@@ -149,6 +149,31 @@ export default function BookingForm({ shop, barbers, services }: Props) {
         setSubmitting(true)
 
         try {
+            // Step 1: Hold the slot before initiating payment
+            const holdRes = await fetch('/api/bookings/hold', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    barber_id: barberId,
+                    service_ids: serviceIds,
+                    slot_start: selectedSlot,
+                    date,
+                    timezone_offset: timezoneOffset,
+                }),
+            })
+
+            if (!holdRes.ok) {
+                const holdError = await holdRes.json()
+                if (holdRes.status === 409) {
+                    throw new Error('This slot was just taken by another customer. Please select a different time.')
+                }
+                throw new Error(holdError.error || 'Failed to hold slot')
+            }
+
+            const holdData = await holdRes.json()
+            const bookingId = holdData.booking_id
+
+            // Step 2: Proceed with payment initiation
             const orderRes = await fetch("/api/payments", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -179,7 +204,7 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                 description: selectedServiceName,
                 order_id: order.id,
                 handler: async function (response: any) {
-                    await createBooking(response.razorpay_payment_id, response.razorpay_order_id, cleanPhone)
+                    await confirmBooking(bookingId, response.razorpay_payment_id, response.razorpay_order_id, cleanPhone)
                 },
                 prefill: {
                     name: customerName,
@@ -190,7 +215,7 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                 modal: {
                     ondismiss: () => {
                         setSubmitting(false)
-                        setError('Payment was cancelled')
+                        setError('Payment was cancelled. Your slot hold will expire in 10 minutes.')
                     }
                 }
             }
@@ -230,26 +255,25 @@ export default function BookingForm({ shop, barbers, services }: Props) {
         }
     }
 
-    const createBooking = async (paymentId: string, orderId: string, finalPhone: string) => {
+    const confirmBooking = async (bookingId: string, paymentId: string, orderId: string, finalPhone: string) => {
         try {
-            const res = await fetch('/api/bookings', {
+            const res = await fetch('/api/bookings/confirm', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    barber_id: barberId,
-                    service_ids: serviceIds,
-                    slot_start: selectedSlot,
+                    booking_id: bookingId,
                     customer_name: customerName.trim(),
                     customer_phone: finalPhone,
-                    date,
-                    timezone_offset: timezoneOffset,
                     razorpay_payment_id: paymentId,
                     razorpay_order_id: orderId,
                     amount: totalPrice * 100 
                 }),
             })
             
-            if (!res.ok) throw new Error('Booking failed after payment')
+            if (!res.ok) {
+                const errorData = await res.json()
+                throw new Error(errorData.error || 'Booking confirmation failed')
+            }
 
             const selectedBarber = barbers.find(b => b.id === barberId)
             const bookingParams = new URLSearchParams({
@@ -266,11 +290,11 @@ export default function BookingForm({ shop, barbers, services }: Props) {
             router.push(`/booking-confirmed?${bookingParams.toString()}`)
 
         } catch (err: any) {
-            // Fallback for payment success but DB fail
+            // Fallback for payment success but confirmation fail
             const selectedBarber = barbers.find(b => b.id === barberId)
             const failureParams = new URLSearchParams({
                 status: 'failed',
-                error: 'Payment captured but booking failed.',
+                error: err.message || 'Payment captured but booking confirmation failed.',
                 shop: shop.name,
                 barber: selectedBarber?.name || '',
                 services: selectedServiceName,

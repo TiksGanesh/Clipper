@@ -1,0 +1,10 @@
+{
+  "name": "booking-cleanup",
+  "version": 1,
+  "crons": [
+    {
+      "path": "/api/bookings/cleanup",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}
