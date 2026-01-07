@@ -2,6 +2,18 @@ import { NextResponse, NextRequest } from 'next/server'
 import { createServiceSupabaseClient } from '@/lib/supabase'
 import { requireAuth } from '@/lib/auth'
 import { checkSubscriptionAccess } from '@/lib/subscription-access'
+import { z } from 'zod'
+
+// Validation schema for walk-in booking
+const walkInSchema = z.object({
+    barber_id: z.string().uuid('Invalid barber ID'),
+    service_ids: z.array(z.string().uuid('Invalid service ID')).min(1, 'At least one service required').max(20, 'Too many services'),
+    customer_name: z.string().trim().max(100, 'Name too long').optional(),
+    customer_phone: z.string().regex(/^\d{10,15}$/, 'Phone must be 10-15 digits').optional(),
+    start_time: z.string().datetime('Invalid start time'),
+    end_time: z.string().datetime('Invalid end time'),
+    timezone_offset: z.number().int().min(-720).max(720).optional()
+});
 
 export async function POST(req: NextRequest) {
     try {
@@ -9,31 +21,25 @@ export async function POST(req: NextRequest) {
         const user = await requireAuth()
         const supabase = createServiceSupabaseClient()
 
-        let body: {
-            barber_id?: string
-            service_ids?: string[]
-            customer_name?: string
-            customer_phone?: string
-            start_time?: string
-            end_time?: string
-            timezone_offset?: number
-        }
+        let body: z.infer<typeof walkInSchema>
 
         try {
-            body = await req.json()
-        } catch {
+            const rawBody = await req.json()
+            const validation = walkInSchema.safeParse(rawBody)
+            
+            if (!validation.success) {
+                return NextResponse.json({ 
+                    error: 'Invalid input', 
+                    details: validation.error.issues 
+                }, { status: 400 })
+            }
+            
+            body = validation.data
+        } catch (error) {
             return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
         }
 
         const { barber_id, service_ids, customer_name, customer_phone, start_time, end_time, timezone_offset } = body
-
-        if (!barber_id || !service_ids || service_ids.length === 0) {
-            return NextResponse.json({ error: 'Missing required fields: barber_id, service_ids' }, { status: 400 })
-        }
-
-        if (!start_time || !end_time) {
-            return NextResponse.json({ error: 'Missing required fields: start_time, end_time' }, { status: 400 })
-        }
 
         // Resolve services and total duration
         const { data: services, error: servicesError } = await supabase

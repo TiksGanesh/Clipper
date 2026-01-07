@@ -3,35 +3,48 @@ import { createServiceSupabaseClient } from '@/lib/supabase'
 import { computeAvailableSlots, getUtcDayRange } from '@/lib/slots'
 import { checkSubscriptionAccess } from '@/lib/subscription-access'
 import type { Database } from '@/types/database'
+import { z } from 'zod'
+
+// Validation schema for booking creation
+const bookingSchema = z.object({
+    barber_id: z.string().uuid('Invalid barber ID'),
+    service_id: z.string().uuid('Invalid service ID').optional(),
+    service_ids: z.array(z.string().uuid('Invalid service ID')).min(1).max(20).optional(),
+    slot_start: z.string().datetime('Invalid slot start time'),
+    customer_name: z.string().trim().min(1, 'Name is required').max(100, 'Name too long'),
+    customer_phone: z.string().regex(/^\d{10,15}$/, 'Phone must be 10-15 digits'),
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD format'),
+    timezone_offset: z.number().int().min(-720).max(720).optional(),
+    razorpay_payment_id: z.string().optional(),
+    razorpay_order_id: z.string().optional(),
+    amount: z.number().positive().max(1000000).optional()
+}).refine(data => data.service_id || (data.service_ids && data.service_ids.length > 0), {
+    message: 'Either service_id or service_ids must be provided',
+    path: ['service_id']
+});
 
 export async function POST(req: Request) {
     const supabase = createServiceSupabaseClient()
 
-    let body: {
-        barber_id?: string
-        service_id?: string
-        service_ids?: string[]
-        slot_start?: string
-        customer_name?: string
-        customer_phone?: string
-        date?: string
-        timezone_offset?: number
-        razorpay_payment_id?: string
-        razorpay_order_id?: string
-        amount?: number
-    }
+    let body: z.infer<typeof bookingSchema>
 
     try {
-        body = await req.json()
-    } catch {
+        const rawBody = await req.json()
+        const validation = bookingSchema.safeParse(rawBody)
+        
+        if (!validation.success) {
+            return NextResponse.json({ 
+                error: 'Invalid input', 
+                details: validation.error.issues 
+            }, { status: 400 })
+        }
+        
+        body = validation.data
+    } catch (error) {
         return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
     }
 
     const { barber_id, service_id, service_ids, slot_start, customer_name, customer_phone, date, timezone_offset, razorpay_payment_id, razorpay_order_id, amount } = body
-
-    if (!barber_id || !slot_start || !customer_name || !customer_phone || !date) {
-        return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
-    }
 
     // Resolve services (multi or single) and total duration
     let primaryServiceId: string | null = null

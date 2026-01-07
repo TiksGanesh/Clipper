@@ -154,11 +154,15 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ 
                     amount: totalPrice, 
-                    userId: cleanPhone 
+                    userId: cleanPhone,
+                    serviceIds: serviceIds
                 }),
             })
 
-            if (!orderRes.ok) throw new Error("Failed to initiate payment")
+            if (!orderRes.ok) {
+                const errorData = await orderRes.json()
+                throw new Error(errorData.error || "Failed to initiate payment")
+            }
             const order = await orderRes.json()
 
             const razorpayKeyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
@@ -596,6 +600,9 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                             <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
                             <input
                                 type="text"
+                                maxLength={100}
+                                required
+                                minLength={1}
                                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-shadow"
                                 value={customerName}
                                 onChange={(e) => setCustomerName(e.target.value)}
@@ -609,11 +616,14 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                                 <input
                                     type="tel"
                                     inputMode="numeric"
+                                    pattern="[0-9 ]{10,11}"
+                                    required
+                                    title="Enter a valid 10-digit phone number"
                                     className="w-full pl-16 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium tracking-wide"
                                     value={customerPhone}
                                     onChange={handlePhoneChange}
                                     placeholder="98765 00000"
-                                    maxLength={11} // 10 digits + 1 space
+                                    maxLength={11}
                                 />
                             </div>
                         </div>

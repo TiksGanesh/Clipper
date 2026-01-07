@@ -45,8 +45,10 @@ export default function AdminSetupUserPage() {
                     <input
                         id="email"
                         type="email"
+                        pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
+                        maxLength={255}
                         value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        onChange={(e) => setEmail(e.target.value.toLowerCase().trim())}
                         required
                         style={{ width: '100%', padding: '8px', marginTop: '5px' }}
                     />
@@ -56,6 +58,10 @@ export default function AdminSetupUserPage() {
                     <input
                         id="password"
                         type="password"
+                        minLength={8}
+                        maxLength={128}
+                        pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}"
+                        title="Password must be 8+ characters with uppercase, lowercase, and number"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required

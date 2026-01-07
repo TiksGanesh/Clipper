@@ -296,6 +296,7 @@ export default function WalkInForm({ shopId, barbers, services, shopPhone, shopN
                 <p className="text-xs font-medium text-gray-700">Customer Info</p>
                 <input
                     type="text"
+                    maxLength={100}
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
                     placeholder="Customer name (defaults to 'Walk-In')"
@@ -304,8 +305,12 @@ export default function WalkInForm({ shopId, barbers, services, shopPhone, shopN
                 <div>
                     <input
                         type="tel"
+                        inputMode="numeric"
+                        pattern="[0-9]{10,15}"
+                        maxLength={15}
+                        title="Enter a valid phone number (10-15 digits)"
                         value={customerPhone}
-                        onChange={(e) => setCustomerPhone(e.target.value)}
+                        onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, ''))}
                         placeholder="Phone number (optional)"
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     />

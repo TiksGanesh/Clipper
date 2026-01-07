@@ -52,6 +52,8 @@ export default async function SetupServicesPage() {
                                         name="service_name"
                                         defaultValue={service?.name ?? ''}
                                         required
+                                        maxLength={100}
+                                        minLength={2}
                                         className="w-full border border-gray-300 px-4 py-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
                                         placeholder="e.g., Haircut"
                                     />
@@ -62,6 +64,8 @@ export default async function SetupServicesPage() {
                                         name="service_duration"
                                         type="number"
                                         min={1}
+                                        max={480}
+                                        step={1}
                                         defaultValue={service?.duration_minutes ?? ''}
                                         required
                                         className="w-full border border-gray-300 px-4 py-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
@@ -74,6 +78,7 @@ export default async function SetupServicesPage() {
                                         name="service_price"
                                         type="number"
                                         min={0}
+                                        max={100000}
                                         step="0.01"
                                         defaultValue={service?.price ?? ''}
                                         required

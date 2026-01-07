@@ -38,19 +38,50 @@ export default async function SetupBarbersPage() {
                 <div className="grid grid-cols-1 gap-4">
                     <div>
                         <label className="block text-sm font-medium">Barber 1 Name</label>
-                        <input name="barber1" required className="mt-1 w-full border px-3 py-2 rounded" />
+                        <input 
+                            name="barber1" 
+                            required 
+                            maxLength={100}
+                            minLength={2}
+                            pattern="[A-Za-z\s]+"
+                            title="Barber name should be 2-100 characters (letters and spaces only)"
+                            className="mt-1 w-full border px-3 py-2 rounded" 
+                        />
                     </div>
                     <div>
                         <label className="block text-sm font-medium">Barber 1 Phone (optional)</label>
-                        <input name="phone1" className="mt-1 w-full border px-3 py-2 rounded" />
+                        <input 
+                            name="phone1" 
+                            type="tel"
+                            inputMode="numeric"
+                            pattern="[0-9]{10,15}"
+                            maxLength={15}
+                            title="Enter a valid phone number (10-15 digits)"
+                            className="mt-1 w-full border px-3 py-2 rounded" 
+                        />
                     </div>
                     <div>
                         <label className="block text-sm font-medium">Barber 2 Name (optional)</label>
-                        <input name="barber2" className="mt-1 w-full border px-3 py-2 rounded" />
+                        <input 
+                            name="barber2" 
+                            maxLength={100}
+                            minLength={2}
+                            pattern="[A-Za-z\s]+"
+                            title="Barber name should be 2-100 characters (letters and spaces only)"
+                            className="mt-1 w-full border px-3 py-2 rounded" 
+                        />
                     </div>
                     <div>
                         <label className="block text-sm font-medium">Barber 2 Phone (optional)</label>
-                        <input name="phone2" className="mt-1 w-full border px-3 py-2 rounded" />
+                        <input 
+                            name="phone2" 
+                            type="tel"
+                            inputMode="numeric"
+                            pattern="[0-9]{10,15}"
+                            maxLength={15}
+                            title="Enter a valid phone number (10-15 digits)"
+                            className="mt-1 w-full border px-3 py-2 rounded" 
+                        />
                     </div>
                 </div>
                 <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded">
