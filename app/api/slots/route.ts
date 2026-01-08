@@ -105,11 +105,17 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: `${barberName} is on leave today. Please select another date or barber.` }, { status: 400 })
     }
 
+    // Determine local day-of-week using provided timezone offset
+    // We shift an in-day marker by -offset to land within the local day
+    const parsedDate = new Date(date)
+    const localMarkerUtc = new Date(parsedDate.getTime() - timezoneOffsetMinutes * 60_000)
+    const localDayOfWeek = localMarkerUtc.getUTCDay()
+
     const { data: workingHours, error: hoursError } = await supabase
         .from('working_hours')
         .select('open_time, close_time, is_closed, day_of_week')
         .eq('shop_id', (barber as any).shop_id)
-        .eq('day_of_week', dayRange.start.getUTCDay())
+        .eq('day_of_week', localDayOfWeek)
         .maybeSingle()
 
     if (hoursError) {
