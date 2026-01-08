@@ -29,9 +29,10 @@ type Props = {
     onSuccess?: (bookingId: string) => void
     initialBarberId?: string
     initialStartTime?: string
+    initialDate?: string
 }
 
-export default function WalkInForm({ shopId, barbers, services, shopPhone, shopName, onSuccess, initialBarberId, initialStartTime }: Props) {
+export default function WalkInForm({ shopId, barbers, services, shopPhone, shopName, onSuccess, initialBarberId, initialStartTime, initialDate }: Props) {
     const router = useRouter()
     const [barberId, setBarberId] = useState(initialBarberId ?? barbers[0]?.id ?? '')
     const [serviceId, setServiceId] = useState(services[0]?.id ?? '')
@@ -44,6 +45,12 @@ export default function WalkInForm({ shopId, barbers, services, shopPhone, shopN
     const [submitting, setSubmitting] = useState(false)
 
     const timezoneOffset = useMemo(() => new Date().getTimezoneOffset(), [])
+    
+    // Determine the date to use: initialDate, or today if not provided
+    const effectiveDate = useMemo(() => {
+        if (initialDate) return initialDate
+        return new Date().toISOString().slice(0, 10)
+    }, [initialDate])
 
     const selectedService = services.find(s => s.id === serviceId)
 
@@ -75,10 +82,9 @@ export default function WalkInForm({ shopId, barbers, services, shopPhone, shopN
             setError('')
             setSelectedSlot(null)
             try {
-                const today = new Date().toISOString().slice(0, 10)
                 const params = new URLSearchParams({
                     barber_id: barberId,
-                    date: today,
+                    date: effectiveDate,
                     service_ids: serviceId,
                     timezone_offset: String(timezoneOffset),
                 })
@@ -111,7 +117,7 @@ export default function WalkInForm({ shopId, barbers, services, shopPhone, shopN
 
         fetchSlots()
         return () => controller.abort()
-    }, [barberId, serviceId, timezoneOffset, initialStartTime, selectedService?.duration_minutes])
+    }, [barberId, serviceId, timezoneOffset, initialStartTime, effectiveDate, selectedService?.duration_minutes])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()

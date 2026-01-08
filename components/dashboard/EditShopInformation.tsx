@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { saveShopClosureAction, saveShopNameAction, saveWorkingHoursAction, saveBarberDetailsAction, saveShopContactAction, addBarberAction } from '@/app/dashboard/edit-shop/actions'
+import { saveShopClosureAction, saveShopNameAction, saveWorkingHoursAction, saveBarberDetailsAction, saveShopContactAction, addBarberAction, saveLunchBreakAction } from '@/app/dashboard/edit-shop/actions'
 
 type Shop = {
     id: string
@@ -30,15 +30,19 @@ type Props = {
     barbers: Barber[]
     workingHours: WorkingHours
     userEmail: string
+    lunchStart?: string
+    lunchEnd?: string
 }
 
 const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
-export default function EditShopInformation({ shop, barbers, workingHours, userEmail }: Props) {
+export default function EditShopInformation({ shop, barbers, workingHours, userEmail, lunchStart = '', lunchEnd = '' }: Props) {
     const [shopName, setShopName] = useState(shop.name)
     const [shopPhone, setShopPhone] = useState(shop.phone || '')
     const [shopAddress, setShopAddress] = useState(shop.address || '')
     const [hours, setHours] = useState<WorkingHours>(workingHours)
+    const [lunchStartTime, setLunchStartTime] = useState(lunchStart)
+    const [lunchEndTime, setLunchEndTime] = useState(lunchEnd)
     const [barberData, setBarberData] = useState<Barber[]>(barbers)
     const [isSaving, setIsSaving] = useState(false)
     const [isClosed, setIsClosed] = useState(false)
@@ -88,6 +92,14 @@ export default function EditShopInformation({ shop, barbers, workingHours, userE
             const nameResult = await saveShopNameAction(shopName)
             if (!nameResult.success) {
                 setSaveError(nameResult.error || 'Failed to save shop name')
+                setIsSaving(false)
+                return
+            }
+
+            // Save lunch break
+            const lunchResult = await saveLunchBreakAction(lunchStartTime, lunchEndTime)
+            if (!lunchResult.success) {
+                setSaveError(lunchResult.error || 'Failed to save lunch break')
                 setIsSaving(false)
                 return
             }
@@ -220,6 +232,7 @@ export default function EditShopInformation({ shop, barbers, workingHours, userE
                     <p className="text-sm text-gray-600 mt-1">These timings apply to all barbers unless overridden.</p>
                 </div>
 
+                {/* Daily Hours */}
                 <div className="space-y-4">
                     {DAYS_OF_WEEK.map((day) => (
                         <div key={day} className="space-y-3 pb-4 border-b border-gray-200 last:border-b-0 last:pb-0">
@@ -246,6 +259,32 @@ export default function EditShopInformation({ shop, barbers, workingHours, userE
                             </div>
                         </div>
                     ))}
+                </div>
+
+                {/* Lunch Break */}
+                <div className="pt-4 border-t border-gray-200 space-y-3">
+                    <h3 className="text-sm font-medium text-gray-900">Shop Lunch Break</h3>
+                    <p className="text-xs text-gray-600">Specify a daily lunch break when no appointments can be booked for any barber.</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <label className="block">
+                            <span className="text-xs font-medium text-gray-700 mb-1 block">Lunch Start (optional)</span>
+                            <input
+                                type="time"
+                                value={lunchStartTime}
+                                onChange={(e) => setLunchStartTime(e.target.value)}
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            />
+                        </label>
+                        <label className="block">
+                            <span className="text-xs font-medium text-gray-700 mb-1 block">Lunch End (optional)</span>
+                            <input
+                                type="time"
+                                value={lunchEndTime}
+                                onChange={(e) => setLunchEndTime(e.target.value)}
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            />
+                        </label>
+                    </div>
                 </div>
             </section>
 

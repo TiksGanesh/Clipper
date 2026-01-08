@@ -59,6 +59,8 @@ export default function BookingForm({ shop, barbers, services }: Props) {
     const [slotsLoading, setSlotsLoading] = useState(false)
     const [error, setError] = useState<string>('')
     const [submitting, setSubmitting] = useState(false)
+    const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'failed'>('idle')
+    const [errorMessage, setErrorMessage] = useState('')
 
     // --- Derived State ---
     const timezoneOffset = useMemo(() => new Date().getTimezoneOffset(), [])
@@ -179,6 +181,9 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                 description: selectedServiceName,
                 order_id: order.id,
                 handler: async function (response: any) {
+                    // Immediately show processing overlay
+                    setPaymentStatus('processing')
+                    setSubmitting(false)
                     await createBooking(response.razorpay_payment_id, response.razorpay_order_id, cleanPhone)
                 },
                 prefill: {
@@ -189,8 +194,14 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                 method: { upi: true, card: true, netbanking: true, wallet: true },
                 modal: {
                     ondismiss: () => {
+                        // User dismissed/cancelled payment modal
                         setSubmitting(false)
-                        setError('Payment was cancelled')
+                        setPaymentStatus('failed')
+                        setErrorMessage('You cancelled the payment. Please try again to complete your booking.')
+                        // Force cleanup
+                        const rzpContainer = document.querySelector('.razorpay-container')
+                        if (rzpContainer) rzpContainer.remove()
+                        document.body.style.overflow = 'auto'
                     }
                 }
             }
@@ -200,25 +211,13 @@ export default function BookingForm({ shop, barbers, services }: Props) {
             rzp.on("payment.failed", function (response: any) {
                 const message = response?.error?.description || 'Payment failed'
                 setSubmitting(false)
+                setPaymentStatus('failed')
+                setErrorMessage(message)
                 
                 // Force remove DOM elements
-                const rzpContainer = document.querySelector('.razorpay-container');
-                if (rzpContainer) rzpContainer.remove();
-                document.body.style.overflow = 'auto';
-
-                const failedParams = new URLSearchParams({
-                    status: 'failed',
-                    error: message,
-                    shop: shop.name,
-                    barber: barbers.find(b => b.id === barberId)?.name || '',
-                    services: selectedServiceName,
-                    date,
-                    time: selectedSlot,
-                    customer: customerName,
-                    phone: cleanPhone,
-                })
-
-                router.push(`/booking-confirmed?${failedParams.toString()}`)
+                const rzpContainer = document.querySelector('.razorpay-container')
+                if (rzpContainer) rzpContainer.remove()
+                document.body.style.overflow = 'auto'
             })
 
             rzp.open()
@@ -266,22 +265,10 @@ export default function BookingForm({ shop, barbers, services }: Props) {
             router.push(`/booking-confirmed?${bookingParams.toString()}`)
 
         } catch (err: any) {
-            // Fallback for payment success but DB fail
-            const selectedBarber = barbers.find(b => b.id === barberId)
-            const failureParams = new URLSearchParams({
-                status: 'failed',
-                error: 'Payment captured but booking failed.',
-                shop: shop.name,
-                barber: selectedBarber?.name || '',
-                services: selectedServiceName,
-                date: date,
-                time: selectedSlot,
-                customer: customerName.trim(),
-                phone: finalPhone,
-                payment_id: paymentId
-            })
-            router.push(`/booking-confirmed?${failureParams.toString()}`)
-            setSubmitting(false)
+            // CRITICAL ERROR: Payment succeeded but booking failed
+            console.error('Critical booking error after payment:', err)
+            setPaymentStatus('success') // Change to 'success' to show critical error state
+            setErrorMessage(err.message || 'Booking confirmation failed')
         }
     }
 
@@ -339,12 +326,132 @@ export default function BookingForm({ shop, barbers, services }: Props) {
         setActiveTab(defaultTab)
     }, [date, groupedSlots])
 
+    // Control body scroll when overlay is active
+    useEffect(() => {
+        if (paymentStatus !== 'idle') {
+            document.body.style.overflow = 'hidden'
+        } else {
+            document.body.style.overflow = 'auto'
+        }
+        return () => {
+            document.body.style.overflow = 'auto'
+        }
+    }, [paymentStatus])
+
     const hasAnySlots = groupedSlots.morning.length > 0 || groupedSlots.afternoon.length > 0 || groupedSlots.evening.length > 0
 
     // --- Render ---
 
     return (
-        <form onSubmit={handlePaymentAndBooking} className="pb-24 max-w-2xl mx-auto"> 
+        <>
+            {/* Full-Screen Payment Overlay */}
+            {paymentStatus !== 'idle' && (
+                <div className="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center p-6">
+                    {/* State 1: Payment Success - Processing Booking */}
+                    {paymentStatus === 'processing' && (
+                        <div className="text-center space-y-6 max-w-md animate-in fade-in duration-300">
+                            {/* Animated Success Icon */}
+                            <div className="relative mx-auto w-20 h-20">
+                                <div className="absolute inset-0 bg-green-100 rounded-full animate-ping opacity-75"></div>
+                                <div className="relative flex items-center justify-center w-20 h-20 bg-green-500 rounded-full">
+                                    <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </div>
+                            </div>
+                            
+                            <div className="space-y-2">
+                                <h2 className="text-2xl font-bold text-gray-900">Payment Successful!</h2>
+                                <p className="text-gray-600">Please wait, securing your appointment slot...</p>
+                                <p className="text-sm text-amber-600 font-medium mt-4 bg-amber-50 rounded-lg p-3 border border-amber-200">
+                                    ⚠️ Do not close or refresh this page
+                                </p>
+                            </div>
+
+                            {/* Processing Spinner */}
+                            <div className="flex items-center justify-center gap-2 mt-6">
+                                <svg className="animate-spin h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <span className="text-sm text-gray-600">Processing your booking...</span>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* State 2: Payment Failed (Recoverable) */}
+                    {paymentStatus === 'failed' && (
+                        <div className="text-center space-y-6 max-w-md animate-in fade-in duration-300">
+                            {/* Error Icon */}
+                            <div className="mx-auto w-20 h-20 bg-red-100 rounded-full flex items-center justify-center">
+                                <svg className="w-10 h-10 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </div>
+                            
+                            <div className="space-y-2">
+                                <h2 className="text-2xl font-bold text-gray-900">Payment Failed</h2>
+                                <p className="text-gray-600">{errorMessage || 'Your payment could not be processed.'}</p>
+                            </div>
+
+                            <button
+                                onClick={() => {
+                                    setPaymentStatus('idle')
+                                    setErrorMessage('')
+                                    document.body.style.overflow = 'auto'
+                                }}
+                                className="w-full max-w-xs mx-auto bg-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-indigo-700 active:scale-95 transition-all"
+                            >
+                                Try Again
+                            </button>
+                        </div>
+                    )}
+
+                    {/* State 3: Critical Error (Money Cut, Booking Failed) */}
+                    {paymentStatus === 'success' && errorMessage && (
+                        <div className="text-center space-y-6 max-w-md animate-in fade-in duration-300">
+                            {/* Warning Icon */}
+                            <div className="mx-auto w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center">
+                                <svg className="w-10 h-10 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                            </div>
+                            
+                            <div className="space-y-3">
+                                <h2 className="text-2xl font-bold text-gray-900">Booking Error</h2>
+                                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                                    <p className="text-amber-900 font-medium mb-2">Your payment was captured successfully</p>
+                                    <p className="text-sm text-amber-700">However, we could not secure your appointment slot. A refund will be initiated automatically within 5-7 business days.</p>
+                                </div>
+                                <p className="text-sm text-gray-600">{errorMessage}</p>
+                            </div>
+
+                            <div className="space-y-3">
+                                <button
+                                    onClick={() => {
+                                        const phone = customerPhone.replace(/\s/g, '')
+                                        window.location.href = `tel:${shop.phone || '+919876543210'}`
+                                    }}
+                                    className="w-full max-w-xs mx-auto bg-amber-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-amber-700 active:scale-95 transition-all flex items-center justify-center gap-2"
+                                >
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                    </svg>
+                                    Contact Support
+                                </button>
+                                <button
+                                    onClick={() => router.push('/')}
+                                    className="text-gray-600 hover:text-gray-900 text-sm font-medium"
+                                >
+                                    Go to Home
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            <form onSubmit={handlePaymentAndBooking} className="pb-24 max-w-2xl mx-auto"> 
             {/* Added pb-24 to prevent content being hidden behind sticky footer */}
             
             <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
@@ -647,20 +754,29 @@ export default function BookingForm({ shop, barbers, services }: Props) {
             </div>
 
             {/* Smart Sticky Footer */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-50 px-4 py-3 md:py-4">
-                <div className="max-w-2xl mx-auto flex items-center justify-between gap-4">
-                    <div className="flex flex-col">
-                        <span className="text-xs text-gray-500 font-medium mb-0.5">Total Payable</span>
-                        <div className="flex items-baseline gap-1">
-                            <span className="text-xl font-bold text-gray-900">₹{totalPrice}</span>
-                            {totalDuration > 0 && <span className="text-xs text-gray-500 font-medium">• {totalDuration} min</span>}
+            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-50 px-4 py-4 md:py-5">
+                <div className="max-w-2xl mx-auto space-y-3">
+                    {/* Payment Breakup */}
+                    <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                        <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Service Total</span>
+                            <span className="text-gray-900 font-medium">₹{totalPrice}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Platform Fee</span>
+                            <span className="text-gray-900 font-medium">₹0</span>
+                        </div>
+                        <div className="border-t border-gray-200 pt-2 flex justify-between">
+                            <span className="text-base font-semibold text-gray-900">Total Payable</span>
+                            <span className="text-base font-bold text-gray-900">₹{totalPrice}</span>
                         </div>
                     </div>
 
+                    {/* Pay Button */}
                     <button
                         onClick={handlePaymentAndBooking}
                         disabled={submitting || !selectedSlot || customerPhone.replace(/\s/g, '').length < 10}
-                        className="flex-1 max-w-xs bg-indigo-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:shadow-none hover:bg-indigo-700 active:scale-95 transition-all flex items-center justify-center gap-2"
+                        className="w-full bg-indigo-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:shadow-none hover:bg-indigo-700 active:scale-95 transition-all flex items-center justify-center gap-2"
                     >
                         {submitting ? (
                             <>
@@ -673,8 +789,14 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                             </>
                         )}
                     </button>
+
+                    {/* Terms & Conditions Disclaimer */}
+                    <p className="text-xs text-center text-gray-500">
+                        By tapping Pay & Confirm, you agree to our <a href="/terms" className="text-indigo-600 hover:underline">Terms and Conditions</a>.
+                    </p>
                 </div>
             </div>
         </form>
+        </>
     )
 }

@@ -40,6 +40,8 @@ type WorkingHours = {
 type DayPayload = {
     working_hours: WorkingHours | null
     bookings: DayBooking[]
+    lunch_start?: string | null
+    lunch_end?: string | null
 }
 
 type SlotState = {
@@ -75,13 +77,16 @@ function overlaps(slotStart: Date, slotEnd: Date, booking: DayBooking) {
     return slotStart < bookingEnd && slotEnd > bookingStart
 }
 
-function buildSlots(date: string, workingHours: WorkingHours | null, bookings: DayBooking[]): SlotState[] {
+function buildSlots(date: string, workingHours: WorkingHours | null, bookings: DayBooking[], lunchStart?: string | null, lunchEnd?: string | null): SlotState[] {
     if (!workingHours || workingHours.is_closed || !workingHours.open_time || !workingHours.close_time) {
         return []
     }
 
     const openMinutes = timeToMinutes(workingHours.open_time)
     const closeMinutes = timeToMinutes(workingHours.close_time)
+    const lunchStartMinutes = timeToMinutes(lunchStart || null)
+    const lunchEndMinutes = timeToMinutes(lunchEnd || null)
+    
     if (openMinutes === null || closeMinutes === null || closeMinutes <= openMinutes) {
         return []
     }
@@ -93,6 +98,21 @@ function buildSlots(date: string, workingHours: WorkingHours | null, bookings: D
     for (let minute = openMinutes; minute < closeMinutes; minute += SLOT_MINUTES) {
         const slotStart = addMinutes(dayStart, minute)
         const slotEnd = addMinutes(dayStart, Math.min(minute + SLOT_MINUTES, closeMinutes))
+        
+        // Check if slot overlaps with lunch break
+        const isLunchTime = lunchStartMinutes !== null && lunchEndMinutes !== null && 
+                            minute < lunchEndMinutes && (minute + SLOT_MINUTES) > lunchStartMinutes
+        
+        if (isLunchTime) {
+            slots.push({
+                start: slotStart.toISOString(),
+                end: slotEnd.toISOString(),
+                status: 'booked',
+                booking: undefined,
+            })
+            continue
+        }
+        
         const blockingBooking = activeBookings.find((booking) => overlaps(slotStart, slotEnd, booking))
         slots.push({
             start: slotStart.toISOString(),
@@ -225,7 +245,7 @@ export default function DayView({ barbers, initialDate, initialBarberId, isReadO
     }, [selectedBarberId, selectedDate, viewMode])
 
     const slots = useMemo(
-        () => buildSlots(selectedDate, payload?.working_hours ?? null, payload?.bookings ?? []),
+        () => buildSlots(selectedDate, payload?.working_hours ?? null, payload?.bookings ?? [], payload?.lunch_start, payload?.lunch_end),
         [selectedDate, payload]
     )
 
@@ -600,14 +620,23 @@ export default function DayView({ barbers, initialDate, initialBarberId, isReadO
 
             {/* Sticky Add Walk-in Button (Mobile) */}
             {viewMode === 'day' && !loading && !dayClosed && (
-                <div className="fixed bottom-4 left-4 right-4 md:hidden">
+                <div className="fixed bottom-4 left-4 right-4 md:hidden flex gap-2">
                     <button
                         type="button"
-                        className="w-full py-3 px-4 text-base font-medium text-white bg-indigo-600 rounded-lg shadow-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors"
+                        className="flex-1 py-3 px-4 text-base font-medium text-white bg-indigo-600 rounded-lg shadow-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors"
                         onClick={handleCreateClick}
                     >
                         + Add Walk-in
                     </button>
+                    <a
+                        href="/dashboard/search"
+                        className="p-3 text-indigo-600 bg-white rounded-lg shadow-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors flex items-center justify-center"
+                        aria-label="Search bookings"
+                    >
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </a>
                 </div>
             )}
 
@@ -629,7 +658,7 @@ export default function DayView({ barbers, initialDate, initialBarberId, isReadO
                         {createType === 'client' ? (
                             <div className="space-y-2">
                                 <p className="text-sm text-gray-600">Redirect to Walk-in form for details.</p>
-                                <a href={`/dashboard/walk-in?barber_id=${encodeURIComponent(selectedBarberId)}&start_time=${encodeURIComponent(selectedSlot)}`} className="inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md">Go to Walk-in</a>
+                                <a href={`/dashboard/walk-in?barber_id=${encodeURIComponent(selectedBarberId)}&start_time=${encodeURIComponent(selectedSlot)}&date=${encodeURIComponent(selectedDate)}`} className="inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md">Go to Walk-in</a>
                             </div>
                         ) : (
                             <div className="space-y-2">

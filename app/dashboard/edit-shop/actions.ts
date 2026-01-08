@@ -189,6 +189,72 @@ export async function saveShopNameAction(shopName: string) {
     }
 }
 
+export async function saveLunchBreakAction(lunchStart: string, lunchEnd: string) {
+    const user = await requireAuth()
+    const supabase = await createServerSupabaseClient()
+
+    // Get shop
+    const { data: shop, error: shopError } = await supabase
+        .from('shops')
+        .select('id')
+        .eq('owner_id', user.id)
+        .is('deleted_at', null)
+        .maybeSingle() as ShopIdResult
+
+    if (shopError || !shop) {
+        return {
+            success: false,
+            error: 'Shop not found',
+        }
+    }
+
+    // CRITICAL SECURITY: Check subscription access
+    const accessCheck = await checkSubscriptionAccess(shop.id)
+    if (!accessCheck.allowed) {
+        return {
+            success: false,
+            error: 'Your subscription is not active. Please contact support.',
+        }
+    }
+
+    // Validate lunch times if both provided
+    if (lunchStart && lunchEnd) {
+        if (lunchEnd <= lunchStart) {
+            return {
+                success: false,
+                error: 'Lunch end time must be after lunch start time',
+            }
+        }
+    }
+
+    // If both are empty, clear lunch break
+    const lunchStartValue = lunchStart ? lunchStart : null
+    const lunchEndValue = lunchEnd ? lunchEnd : null
+
+    // Update shop with lunch break times
+    const { error: updateError } = await supabase
+        .from('shops')
+        // @ts-ignore - Supabase service client type inference issue
+        .update({
+            lunch_start: lunchStartValue,
+            lunch_end: lunchEndValue,
+        })
+        .eq('id', shop.id)
+
+    if (updateError) {
+        console.error('Error updating lunch break:', updateError)
+        return {
+            success: false,
+            error: 'Failed to save lunch break',
+        }
+    }
+
+    revalidatePath('/dashboard/edit-shop')
+    return {
+        success: true,
+    }
+}
+
 export async function saveWorkingHoursAction(hours: {
     [day: string]: {
         isOpen: boolean

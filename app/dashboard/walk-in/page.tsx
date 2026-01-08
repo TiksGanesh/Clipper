@@ -61,35 +61,23 @@ export default async function WalkInPage({ searchParams }: { searchParams?: Reco
 
     const initialBarberId = searchParams?.barber_id
     const initialStartTime = searchParams?.start_time
+    const initialDate = searchParams?.date
 
     return (
         <div className="min-h-screen bg-gray-50 overflow-x-hidden">
-            <nav className="bg-white shadow">
-                <div className="max-w-7xl mx-auto px-4">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-3 sm:py-0 sm:h-16 gap-2 sm:gap-4">
-                        <Link href="/dashboard" className="text-base sm:text-xl font-bold text-gray-900 hover:text-gray-700">
-                            ← Back
-                        </Link>
-                        <div className="flex items-center gap-2 sm:gap-4 text-sm">
-                            <span className="text-gray-600 truncate max-w-[150px] sm:max-w-none">{user.email}</span>
-                            <form action="/api/auth/signout" method="POST">
-                                <button
-                                    type="submit"
-                                    className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition"
-                                >
-                                    Sign Out
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </nav>
+            {/* Compact Sticky Header */}
+            <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3">
+                <Link href="/dashboard" className="p-1 hover:bg-gray-100 rounded-lg transition-colors" aria-label="Back to Dashboard">
+                    <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                </Link>
+                <h1 className="flex-1 text-lg font-bold text-gray-900">Add Walk-in</h1>
+                <div className="w-6" />
+            </header>
 
             <main className="max-w-4xl mx-auto py-4 md:py-6 px-4">
                 <div className="bg-white rounded-lg shadow-sm p-4 md:p-6">
-                    <h1 className="text-xl md:text-3xl font-bold text-gray-900 mb-2">Add Walk-In</h1>
-                    <p className="text-sm md:text-base text-gray-600 mb-6">Create a new walk-in appointment.</p>
-
                     <WalkInForm
                         shopId={shopId}
                         barbers={(barbers as Barber[]) ?? []}
@@ -98,6 +86,7 @@ export default async function WalkInPage({ searchParams }: { searchParams?: Reco
                         shopName={shopName}
                         initialBarberId={initialBarberId}
                         initialStartTime={initialStartTime}
+                        initialDate={initialDate}
                     />
                 </div>
             </main>

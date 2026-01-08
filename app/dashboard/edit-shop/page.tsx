@@ -14,10 +14,10 @@ export default async function EditShopPage() {
     // Fetch shop
     const { data: shop } = await supabase
         .from('shops')
-        .select('id, name, phone, address')
+        .select('id, name, phone, address, lunch_start, lunch_end')
         .eq('owner_id', user.id)
         .is('deleted_at', null)
-        .maybeSingle() as { data: { id: string; name: string; phone: string | null; address: string | null } | null; error: any }
+        .maybeSingle() as { data: { id: string; name: string; phone: string | null; address: string | null; lunch_start: string | null; lunch_end: string | null } | null; error: any }
 
     if (!shop) {
         return <SetupPendingMessage userEmail={user.email ?? ''} step="shop" />
@@ -75,6 +75,8 @@ export default async function EditShopPage() {
                     barbers={barbers ?? []}
                     workingHours={workingHours}
                     userEmail={user.email ?? ''}
+                    lunchStart={shop.lunch_start || ''}
+                    lunchEnd={shop.lunch_end || ''}
                 />
             </main>
         </div>

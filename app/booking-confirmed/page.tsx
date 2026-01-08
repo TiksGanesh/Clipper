@@ -100,6 +100,11 @@ export default function BookingConfirmedPage({
               ? (isWalkIn ? 'Walk-In Slot Booked' : 'Booking Confirmed')
               : 'Payment Failed'}
           </h1>
+          {status === 'success' && customer && (
+            <p className="text-lg text-gray-700 mt-2 font-medium">
+              for {customer}
+            </p>
+          )}
           {status === 'success' && isWalkIn && (
             <p className="text-sm text-gray-600 mt-2">Redirecting to dashboard in {redirectCountdown}s...</p>
           )}
@@ -197,7 +202,12 @@ export default function BookingConfirmedPage({
             if (isWalkIn) {
               router.push('/dashboard')
             } else {
-              window.close()
+              // Redirect to booking form for new booking or home if no shop_id
+              if (shopId) {
+                router.push(`/book/${shopId}`)
+              } else {
+                router.push('/')
+              }
             }
           }}
           className={`w-full ${status === 'failed' ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' : (isWalkIn ? 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500' : 'bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500')} text-white font-medium py-3 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors`}
