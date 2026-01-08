@@ -55,6 +55,25 @@ export default function BookingForm({ shop, barbers, services }: Props) {
     const [customerPhone, setCustomerPhone] = useState('')
     const [activeTab, setActiveTab] = useState<'morning' | 'afternoon' | 'evening'>('morning')
 
+    // Date options: Today and Tomorrow
+    const dateOptions = useMemo(() => {
+        const today = new Date()
+        const tomorrow = new Date(Date.now() + 86400000)
+        
+        return [
+            {
+                value: today.toISOString().slice(0, 10),
+                label: 'Today',
+                fullLabel: `Today, ${today.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`
+            },
+            {
+                value: tomorrow.toISOString().slice(0, 10),
+                label: 'Tomorrow',
+                fullLabel: `Tomorrow, ${tomorrow.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`
+            }
+        ]
+    }, [])
+
     // UI State
     const [slotsLoading, setSlotsLoading] = useState(false)
     const [error, setError] = useState<string>('')
@@ -68,12 +87,6 @@ export default function BookingForm({ shop, barbers, services }: Props) {
     const totalDuration = useMemo(() => selectedServices.reduce((sum, s) => sum + (s.duration_minutes || 0), 0), [selectedServices])
     const totalPrice = useMemo(() => selectedServices.reduce((sum, s) => sum + (s.price || 0), 0), [selectedServices])
     const selectedServiceName = useMemo(() => selectedServices.map((s) => s.name).join(' + '), [selectedServices])
-
-    const maxDateStr = useMemo(() => {
-        const today = new Date()
-        const plus1 = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1)
-        return plus1.toISOString().slice(0, 10)
-    }, [])
 
     // --- Helpers ---
     const scrollToSection = (ref: React.RefObject<HTMLElement>) => {
@@ -569,14 +582,26 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                     </h2>
                     
                     <div className="space-y-4">
-                        <input
-                            type="date"
-                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-50/50"
-                            value={date}
-                            onChange={(e) => setDate(e.target.value)}
-                            min={new Date().toISOString().slice(0, 10)}
-                            max={maxDateStr}
-                        />
+                        {/* Date Selection Toggle */}
+                        <div className="flex gap-3">
+                            {dateOptions.map((option) => {
+                                const isSelected = date === option.value
+                                return (
+                                    <button
+                                        key={option.value}
+                                        type="button"
+                                        onClick={() => setDate(option.value)}
+                                        className={`flex-1 px-4 py-3 rounded-xl border-2 font-medium transition-all ${
+                                            isSelected
+                                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
+                                                : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                        }`}
+                                    >
+                                        {option.fullLabel}
+                                    </button>
+                                )
+                            })}
+                        </div>
 
                         {date && (
                             <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
