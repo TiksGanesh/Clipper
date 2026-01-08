@@ -151,6 +151,17 @@ export default function BookingForm({ shop, barbers, services }: Props) {
         setSubmitting(true)
 
         try {
+            console.log('[booking-form] starting payment + booking', {
+                barberId,
+                serviceIds,
+                date,
+                selectedSlot,
+                timezoneOffset,
+                customerName: customerName.trim(),
+                customerPhone: cleanPhone,
+                totalPrice,
+            })
+
             const orderRes = await fetch("/api/payments", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -184,6 +195,12 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                     // Immediately show processing overlay
                     setPaymentStatus('processing')
                     setSubmitting(false)
+                    console.log('[booking-form] payment success, creating booking', {
+                        paymentId: response?.razorpay_payment_id,
+                        orderId: response?.razorpay_order_id,
+                        slot: selectedSlot,
+                        date,
+                    })
                     await createBooking(response.razorpay_payment_id, response.razorpay_order_id, cleanPhone)
                 },
                 prefill: {
@@ -248,7 +265,11 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                 }),
             })
             
-            if (!res.ok) throw new Error('Booking failed after payment')
+            if (!res.ok) {
+                const errorBody = await res.json().catch(() => ({} as any))
+                console.error('[booking-form] booking failed after payment', { status: res.status, body: errorBody })
+                throw new Error('Booking failed after payment')
+            }
 
             const selectedBarber = barbers.find(b => b.id === barberId)
             const bookingParams = new URLSearchParams({

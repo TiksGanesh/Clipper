@@ -26,6 +26,23 @@ const bookingSchema = z.object({
 export async function POST(req: Request) {
     const supabase = createServiceSupabaseClient()
 
+    // Debug: raw request body snapshot (safe fields only)
+    try {
+        const peek = await req.clone().json()
+        console.log('[booking-api] incoming payload', {
+            barber_id: peek?.barber_id,
+            service_ids: peek?.service_ids,
+            slot_start: peek?.slot_start,
+            date: peek?.date,
+            tz_offset: peek?.timezone_offset,
+            payment_id: peek?.razorpay_payment_id,
+            order_id: peek?.razorpay_order_id,
+            amount: peek?.amount,
+        })
+    } catch (e) {
+        console.warn('[booking-api] failed to read incoming payload for debug')
+    }
+
     let body: z.infer<typeof bookingSchema>
 
     try {
@@ -198,6 +215,7 @@ export async function POST(req: Request) {
         .lt('start_time', dayRange.end.toISOString())
 
     if (bookingsError) {
+        console.error('[booking-api] fetch bookings error', bookingsError)
         return NextResponse.json({ error: 'Failed to fetch bookings' }, { status: 500 })
     }
 
@@ -227,16 +245,38 @@ export async function POST(req: Request) {
     })
 
     const selectedSlot = slots.find((s) => s.start === slot_start)
+
+    console.log('[booking-api] slot check', {
+        requested: slot_start,
+        availableCount: slots.length,
+        matched: !!selectedSlot,
+        dayRangeStart: dayRange.start.toISOString(),
+        dayRangeEnd: dayRange.end.toISOString(),
+        tz_offset: timezone_offset,
+    })
     if (!selectedSlot) {
         return NextResponse.json({ error: 'Selected slot is no longer available' }, { status: 400 })
     }
 
-    // If the requested date is today (UTC), ensure slot_start is future
-    const now = new Date()
-    const isToday = dayRange.start.getUTCFullYear() === now.getUTCFullYear()
-        && dayRange.start.getUTCMonth() === now.getUTCMonth()
-        && dayRange.start.getUTCDate() === now.getUTCDate()
-    if (isToday && new Date(selectedSlot.start) <= now) {
+    // If the requested date is today (user's local tz), ensure slot_start is in the future
+    const nowUtc = new Date()
+    const offsetMs = (timezone_offset || 0) * 60 * 1000
+    const localNow = new Date(nowUtc.getTime() - offsetMs)
+    const localSelected = new Date(new Date(selectedSlot.start).getTime() - offsetMs)
+    const isToday = dayRange.start.getUTCFullYear() === localNow.getUTCFullYear()
+        && dayRange.start.getUTCMonth() === localNow.getUTCMonth()
+        && dayRange.start.getUTCDate() === localNow.getUTCDate()
+    // Add a small 2-minute grace to avoid race conditions around the current moment
+    const graceMs = 2 * 60 * 1000
+    const isPast = isToday && localSelected.getTime() <= (localNow.getTime() - graceMs)
+    if (isPast) {
+        console.log('[booking-api] past-time rejection', {
+            slot: selectedSlot.start,
+            localSelected,
+            localNow,
+            tz_offset: timezone_offset,
+            graceMs,
+        })
         return NextResponse.json({ error: 'Cannot book past time' }, { status: 400 })
     }
 
