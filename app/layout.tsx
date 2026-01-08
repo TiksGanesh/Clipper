@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { validateEnv } from '@/lib/env'
+import NextTopLoader from 'nextjs-toploader'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -24,7 +25,20 @@ export default function RootLayout({
     }
     return (
         <html lang="en" className="overflow-x-hidden">
-            <body className="overflow-x-hidden">{children}</body>
+            <body className="overflow-x-hidden">
+                <NextTopLoader
+                    color="#4F46E5"
+                    initialPosition={0.08}
+                    crawlSpeed={200}
+                    height={3}
+                    crawl={true}
+                    showSpinner={false}
+                    easing="ease"
+                    speed={200}
+                    zIndex={9999}
+                />
+                {children}
+            </body>
         </html>
     )
 }

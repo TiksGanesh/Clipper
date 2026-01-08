@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
+import { withProgress } from '@/lib/safe-action'
 import { createServiceAction, updateServiceAction, deleteServiceAction } from '@/app/dashboard/services/actions'
 
 type Service = {
@@ -102,7 +103,7 @@ export default function ManageServicesClient({ services, userEmail, errorMessage
                 formData.append('price', price.toString())
                 formData.append('advance_amount', advanceAmount.toString())
                 formData.append('requires_advance', requiresAdvance ? 'on' : 'off')
-                await createServiceAction(formData)
+                await withProgress(createServiceAction(formData))
                 // Refresh the page to show the new service
                 window.location.reload()
             }
@@ -116,7 +117,7 @@ export default function ManageServicesClient({ services, userEmail, errorMessage
                 formData.append('advance_amount', advanceAmount.toString())
                 formData.append('requires_advance', requiresAdvance ? 'on' : 'off')
                 formData.append('is_active', editing.isActive ? 'on' : 'off')
-                await updateServiceAction(formData)
+                await withProgress(updateServiceAction(formData))
                 // Refresh the page to show updated service
                 window.location.reload()
             }
@@ -143,7 +144,7 @@ export default function ManageServicesClient({ services, userEmail, errorMessage
             formData.append('advance_amount', service.advanceAmount.toString())
             formData.append('requires_advance', service.requiresAdvance ? 'on' : 'off')
             formData.append('is_active', (!service.isActive) ? 'on' : 'off')
-            await updateServiceAction(formData)
+            await withProgress(updateServiceAction(formData))
             // Refresh the page to show updated status
             window.location.reload()
         } catch (err) {
@@ -162,7 +163,7 @@ export default function ManageServicesClient({ services, userEmail, errorMessage
         try {
             const formData = new FormData()
             formData.append('id', confirmDelete.id)
-            await deleteServiceAction(formData)
+            await withProgress(deleteServiceAction(formData))
             // Refresh the page to show the deletion
             window.location.reload()
         } catch (err) {

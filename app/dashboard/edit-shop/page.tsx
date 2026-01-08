@@ -6,6 +6,7 @@ import EditShopInformation from '@/components/dashboard/EditShopInformation'
 import SetupPendingMessage from '@/components/dashboard/SetupPendingMessage'
 import { checkSubscriptionAccess } from '@/lib/subscription-access'
 import SubscriptionBlockedPage from '@/components/dashboard/SubscriptionBlockedPage'
+import { PAGINATION_LIMITS } from '@/lib/pagination'
 
 export default async function EditShopPage() {
     const user = await requireAuth()
@@ -36,7 +37,8 @@ export default async function EditShopPage() {
         .eq('shop_id', shop.id)
         .eq('is_active', true)
         .is('deleted_at', null)
-        .order('created_at', { ascending: true }) as { data: Array<{ id: string; name: string; phone: string | null }> | null; error: any }
+        .order('created_at', { ascending: true })
+        .limit(PAGINATION_LIMITS.BARBERS) as { data: Array<{ id: string; name: string; phone: string | null }> | null; error: any }
 
     // Fetch working hours
     const { data: workingHoursData } = await supabase

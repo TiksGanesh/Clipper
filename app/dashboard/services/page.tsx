@@ -8,6 +8,7 @@ import ManageServicesClient from '@/components/dashboard/ManageServicesClient'
 import SetupPendingMessage from '@/components/dashboard/SetupPendingMessage'
 import { checkSubscriptionAccess } from '@/lib/subscription-access'
 import SubscriptionBlockedPage from '@/components/dashboard/SubscriptionBlockedPage'
+import { PAGINATION_LIMITS } from '@/lib/pagination'
 
 export default async function DashboardServicesPage() {
     const user = await requireAuth()
@@ -36,7 +37,8 @@ export default async function DashboardServicesPage() {
         .select('id, name, duration_minutes, price, is_active')
         .eq('shop_id', shopId)
         .is('deleted_at', null)
-        .order('created_at', { ascending: true }) as { 
+        .order('created_at', { ascending: true })
+        .limit(PAGINATION_LIMITS.SERVICES) as { 
             data: Array<{ 
                 id: string; 
                 name: string; 

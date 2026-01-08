@@ -5,7 +5,7 @@ export default function Home() {
         <main className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4 py-8 sm:p-6">
             <div className="w-full max-w-md">
                 <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-gray-900 mb-6 sm:mb-8 text-center leading-tight">
-                    Welcome to Style Cuts
+                    Welcome to Clipper
                 </h1>
                 
                 <div className="flex flex-col gap-3 sm:gap-4 w-full">

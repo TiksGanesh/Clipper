@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { withProgress } from '@/lib/safe-action'
 import { addBarberLeaveAction, removeBarberLeaveAction } from '@/app/dashboard/manage-leave/actions'
 
 type Barber = {
@@ -38,7 +39,7 @@ export default function ManageBarberLeave({ barbers, leaves, userEmail }: Props)
         const today = new Date().toISOString().split('T')[0]
         const selectedBarber = barbers.find((b) => b.id === selectedBarberId)
 
-        const result = await addBarberLeaveAction(selectedBarberId, today)
+        const result = await withProgress(addBarberLeaveAction(selectedBarberId, today))
         
         if (result.success) {
             setLeaveList((prev) => [
@@ -74,7 +75,7 @@ export default function ManageBarberLeave({ barbers, leaves, userEmail }: Props)
 
         const selectedBarber = barbers.find((b) => b.id === selectedBarberId)
 
-        const result = await addBarberLeaveAction(selectedBarberId, leaveDate)
+        const result = await withProgress(addBarberLeaveAction(selectedBarberId, leaveDate))
         
         if (result.success) {
             setLeaveList((prev) => [
@@ -104,7 +105,7 @@ export default function ManageBarberLeave({ barbers, leaves, userEmail }: Props)
     }
 
     const handleDeleteLeave = async (leaveId: string) => {
-        const result = await removeBarberLeaveAction(leaveId)
+        const result = await withProgress(removeBarberLeaveAction(leaveId))
         
         if (result.success) {
             setLeaveList((prev) => prev.filter((l) => l.id !== leaveId))

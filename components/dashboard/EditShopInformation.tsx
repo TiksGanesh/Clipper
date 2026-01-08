@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { withProgress } from '@/lib/safe-action'
 import { saveShopClosureAction, saveShopNameAction, saveWorkingHoursAction, saveBarberDetailsAction, saveShopContactAction, addBarberAction, saveLunchBreakAction } from '@/app/dashboard/edit-shop/actions'
 
 type Shop = {
@@ -82,7 +83,7 @@ export default function EditShopInformation({ shop, barbers, workingHours, userE
 
         try {
             // Save shop contact (phone and address)
-            const contactResult = await saveShopContactAction(shopPhone, shopAddress)
+            const contactResult = await withProgress(saveShopContactAction(shopPhone, shopAddress))
             if (!contactResult.success) {
                 setSaveError(contactResult.error || 'Failed to save shop contact')
                 setIsSaving(false)
@@ -90,7 +91,7 @@ export default function EditShopInformation({ shop, barbers, workingHours, userE
             }
 
             // Save shop name
-            const nameResult = await saveShopNameAction(shopName)
+            const nameResult = await withProgress(saveShopNameAction(shopName))
             if (!nameResult.success) {
                 setSaveError(nameResult.error || 'Failed to save shop name')
                 setIsSaving(false)
@@ -98,7 +99,7 @@ export default function EditShopInformation({ shop, barbers, workingHours, userE
             }
 
             // Save lunch break
-            const lunchResult = await saveLunchBreakAction(lunchStartTime, lunchEndTime)
+            const lunchResult = await withProgress(saveLunchBreakAction(lunchStartTime, lunchEndTime))
             if (!lunchResult.success) {
                 setSaveError(lunchResult.error || 'Failed to save lunch break')
                 setIsSaving(false)
@@ -106,7 +107,7 @@ export default function EditShopInformation({ shop, barbers, workingHours, userE
             }
 
             // Save working hours
-            const hoursResult = await saveWorkingHoursAction(hours)
+            const hoursResult = await withProgress(saveWorkingHoursAction(hours))
             if (!hoursResult.success) {
                 setSaveError(hoursResult.error || 'Failed to save working hours')
                 setIsSaving(false)
@@ -114,7 +115,7 @@ export default function EditShopInformation({ shop, barbers, workingHours, userE
             }
 
             // Save barber details (only existing barbers)
-            const barberResult = await saveBarberDetailsAction(barberData)
+            const barberResult = await withProgress(saveBarberDetailsAction(barberData))
             if (!barberResult.success) {
                 setSaveError(barberResult.error || 'Failed to save barber details')
                 setIsSaving(false)
@@ -122,7 +123,7 @@ export default function EditShopInformation({ shop, barbers, workingHours, userE
             }
 
             // Save shop closure
-            const closureResult = await saveShopClosureAction(closedFrom, closedTo, closureReason, isClosed)
+            const closureResult = await withProgress(saveShopClosureAction(closedFrom, closedTo, closureReason, isClosed))
             if (!closureResult.success) {
                 setSaveError(closureResult.error || 'Failed to save shop closure')
                 setIsSaving(false)
@@ -149,7 +150,7 @@ export default function EditShopInformation({ shop, barbers, workingHours, userE
         setIsAddingBarber(true)
 
         try {
-            const result = await addBarberAction(newBarberName, newBarberPhone || null)
+            const result = await withProgress(addBarberAction(newBarberName, newBarberPhone || null))
 
             if (!result.success) {
                 setAddBarberError(result.error || 'Failed to add barber')

@@ -8,6 +8,7 @@ import { getShopSetupStatus } from '@/lib/shop-setup-status'
 import { checkSubscriptionAccess } from '@/lib/subscription-access'
 import SubscriptionBlockedPage from '@/components/dashboard/SubscriptionBlockedPage'
 import { getUtcDayRange } from '@/lib/slots'
+import { PAGINATION_LIMITS } from '@/lib/pagination'
 
 type Barber = {
     id: string
@@ -77,13 +78,15 @@ export default async function DashboardPage() {
             .select('id, name')
             .eq('shop_id', activeShopId)
             .is('deleted_at', null)
-            .order('name'),
+            .order('name')
+            .limit(PAGINATION_LIMITS.BARBERS),
         supabase
             .from('services')
             .select('id, name, duration_minutes, price')
             .eq('shop_id', activeShopId)
             .is('deleted_at', null)
-            .order('name'),
+            .order('name')
+            .limit(PAGINATION_LIMITS.SERVICES),
         getBarberLeaveStatuses(activeShopId),
     ])
 

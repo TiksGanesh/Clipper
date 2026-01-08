@@ -8,6 +8,7 @@ import SetupPendingMessage from '@/components/dashboard/SetupPendingMessage'
 import { checkSubscriptionAccess } from '@/lib/subscription-access'
 import SubscriptionBlockedPage from '@/components/dashboard/SubscriptionBlockedPage'
 import SearchBookingsClient from '@/components/dashboard/SearchBookingsClient'
+import { PAGINATION_LIMITS } from '@/lib/pagination'
 
 type Booking = {
     id: string
@@ -72,7 +73,7 @@ export default async function SearchPage({ searchParams }: { searchParams?: Reco
                     `customer_name.ilike.%${query}%,customer_phone.like.%${query}%`
                 )
                 .order('start_time', { ascending: false })
-                .limit(50)
+                .limit(PAGINATION_LIMITS.BOOKINGS)
 
             if (searchError) {
                 error = searchError.message
