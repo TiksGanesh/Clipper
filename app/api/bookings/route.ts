@@ -180,6 +180,17 @@ export async function POST(req: Request) {
         }
     }
 
+    // Fetch lunch break times for the shop
+    const { data: shop, error: shopError } = await supabase
+        .from('shops')
+        .select('lunch_start, lunch_end')
+        .eq('id', shopId!)
+        .maybeSingle()
+
+    if (shopError) {
+        return NextResponse.json({ error: 'Failed to fetch shop data' }, { status: 500 })
+    }
+
     // Fetch same-day bookings for overlap check
     const { data: bookings, error: bookingsError } = await supabase
         .from('bookings')
@@ -194,11 +205,29 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Failed to fetch bookings' }, { status: 500 })
     }
 
+    // Create a fake booking for lunch break to exclude lunch time from available slots
+    let lunchBreakBooking: { start_time: string; end_time: string } | null = null
+    if (shop && (shop as any).lunch_start && (shop as any).lunch_end) {
+        const lunchStartMinutes = timeToMinutes((shop as any).lunch_start)
+        const lunchEndMinutes = timeToMinutes((shop as any).lunch_end)
+        const lunchStart = new Date(dayRange.start)
+        lunchStart.setUTCMinutes(lunchStart.getUTCMinutes() + lunchStartMinutes)
+        const lunchEnd = new Date(dayRange.start)
+        lunchEnd.setUTCMinutes(lunchEnd.getUTCMinutes() + lunchEndMinutes)
+        lunchBreakBooking = {
+            start_time: lunchStart.toISOString(),
+            end_time: lunchEnd.toISOString()
+        }
+    }
+
+    // Combine real bookings with lunch break
+    const allBookings = lunchBreakBooking ? [...(bookings ?? []), lunchBreakBooking] : (bookings ?? [])
+
     const slots = computeAvailableSlots({
         date,
         serviceDurationMinutes: totalDuration,
         workingHours: adjustedWorkingHours ?? null,
-        bookings: bookings ?? [],
+        bookings: allBookings,
     })
 
     const selectedSlot = slots.find((s) => s.start === slot_start)
