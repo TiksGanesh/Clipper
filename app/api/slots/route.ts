@@ -6,6 +6,8 @@ import { checkSubscriptionAccess } from '@/lib/subscription-access'
 
 // Force dynamic rendering for this API route
 export const dynamic = 'force-dynamic'
+// Ensure Node.js runtime on Vercel for Supabase server client compatibility
+export const runtime = 'nodejs'
 
 // Helper to convert minutes since midnight to HH:MM:SS format
 function minutesToTimeString(minutes: number): string {
@@ -24,13 +26,15 @@ export async function GET(req: Request) {
     const serviceIdsParam = url.searchParams.get('service_ids')
     const serviceDurationParam = url.searchParams.get('service_duration')
     const timezoneOffsetStr = url.searchParams.get('timezone_offset')
+    const debug = url.searchParams.get('debug') === '1'
 
     if (!barberId || !date) {
         return NextResponse.json({ error: 'Missing or invalid parameters' }, { status: 400 })
     }
 
     // Parse timezone offset (minutes, negative for ahead of UTC)
-    const timezoneOffsetMinutes = timezoneOffsetStr ? parseInt(timezoneOffsetStr, 10) : 0
+    const parsedOffset = timezoneOffsetStr ? parseInt(timezoneOffsetStr, 10) : 0
+    const timezoneOffsetMinutes = Number.isFinite(parsedOffset) ? parsedOffset : 0
 
     let dayRange: ReturnType<typeof getUtcDayRange>
     try {
@@ -106,10 +110,27 @@ export async function GET(req: Request) {
     }
 
     // Determine local day-of-week using provided timezone offset
-    // We shift an in-day marker by -offset to land within the local day
+    // Convert local midnight to UTC by adding the offset minutes
     const parsedDate = new Date(date)
-    const localMarkerUtc = new Date(parsedDate.getTime() - timezoneOffsetMinutes * 60_000)
+    // Fallback safely if offset is invalid: use UTC day
+    const localMarkerUtc = Number.isFinite(timezoneOffsetMinutes)
+        ? new Date(parsedDate.getTime() + timezoneOffsetMinutes * 60_000)
+        : parsedDate
     const localDayOfWeek = localMarkerUtc.getUTCDay()
+
+    if (debug) {
+        return NextResponse.json({
+            debug: {
+                date,
+                timezoneOffsetMinutes,
+                parsedDate: parsedDate.toISOString(),
+                localMarkerUtc: localMarkerUtc.toISOString(),
+                localDayOfWeek,
+                utcDayOfWeek: dayRange.start.getUTCDay(),
+                shopId: (barber as any).shop_id,
+            }
+        })
+    }
 
     const { data: workingHours, error: hoursError } = await supabase
         .from('working_hours')
