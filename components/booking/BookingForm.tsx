@@ -54,24 +54,27 @@ export default function BookingForm({ shop, barbers, services }: Props) {
     const [customerName, setCustomerName] = useState('')
     const [customerPhone, setCustomerPhone] = useState('')
     const [activeTab, setActiveTab] = useState<'morning' | 'afternoon' | 'evening'>('morning')
+    const [dateOptions, setDateOptions] = useState<Array<{ value: string; label: string; fullLabel: string }>>([])
 
-    // Date options: Today and Tomorrow
-    const dateOptions = useMemo(() => {
+    // Date options: Today and Tomorrow (client-side only to avoid hydration mismatch)
+    useEffect(() => {
         const today = new Date()
         const tomorrow = new Date(Date.now() + 86400000)
+        const todayValue = formatDateLocal(today)
+        const tomorrowValue = formatDateLocal(tomorrow)
         
-        return [
+        setDateOptions([
             {
-                value: today.toISOString().slice(0, 10),
+                value: todayValue,
                 label: 'Today',
                 fullLabel: `Today, ${today.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`
             },
             {
-                value: tomorrow.toISOString().slice(0, 10),
+                value: tomorrowValue,
                 label: 'Tomorrow',
                 fullLabel: `Tomorrow, ${tomorrow.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`
             }
-        ]
+        ])
     }, [])
 
     // UI State
@@ -93,6 +96,13 @@ export default function BookingForm({ shop, barbers, services }: Props) {
         if (ref.current) {
             ref.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
         }
+    }
+
+    const formatDateLocal = (value: Date) => {
+        const year = value.getFullYear()
+        const month = String(value.getMonth() + 1).padStart(2, '0')
+        const day = String(value.getDate()).padStart(2, '0')
+        return `${year}-${month}-${day}`
     }
 
     const formatPhone = (value: string) => {
@@ -321,7 +331,7 @@ export default function BookingForm({ shop, barbers, services }: Props) {
     }
 
     const groupedSlots = useMemo(() => {
-        const isToday = date === new Date().toISOString().slice(0, 10)
+        const isToday = date === formatDateLocal(new Date())
         const now = new Date()
         const currentHour = isToday ? now.getHours() : -1
         const currentMinute = isToday ? now.getMinutes() : 0
