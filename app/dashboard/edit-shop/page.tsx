@@ -45,11 +45,14 @@ export default async function EditShopPage() {
         .eq('shop_id', shop.id) as { data: Array<{ day_of_week: number; open_time: string; close_time: string; is_closed: boolean }> | null; error: any }
 
     // Map working hours to days
+    // Database uses 0 = Sunday ... 6 = Saturday
+    // UI displays Monday-first; adjust index so Monday->1, ..., Sunday->0
     const workingHours: Record<string, any> = {}
     const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
     DAYS.forEach((day, idx) => {
-        const dayData = (workingHoursData ?? []).find((h) => h.day_of_week === idx)
+        const dbIdx = (idx + 1) % 7
+        const dayData = (workingHoursData ?? []).find((h) => h.day_of_week === dbIdx)
         workingHours[day] = {
             isOpen: !dayData?.is_closed,
             openTime: dayData?.open_time || '09:00',
@@ -65,7 +68,7 @@ export default async function EditShopPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                     </svg>
                 </Link>
-                <h1 className="flex-1 text-lg font-bold text-gray-900">Shop Info</h1>
+                <h1 className="flex-1 text-lg font-bold text-gray-900">Edit Shop</h1>
                 <div className="w-6" aria-hidden="true" />
             </header>
 

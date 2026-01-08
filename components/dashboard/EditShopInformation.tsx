@@ -55,6 +55,7 @@ export default function EditShopInformation({ shop, barbers, workingHours, userE
     const [newBarberName, setNewBarberName] = useState('')
     const [newBarberPhone, setNewBarberPhone] = useState('')
     const [addBarberError, setAddBarberError] = useState('')
+    const [confirmCloseDay, setConfirmCloseDay] = useState<string | null>(null)
 
     const handleBarberNameChange = (id: string, name: string) => {
         setBarberData((prev) => prev.map((b) => (b.id === id ? { ...b, name } : b)))
@@ -171,6 +172,12 @@ export default function EditShopInformation({ shop, barbers, workingHours, userE
 
     return (
         <div className="space-y-6 pb-20">
+            {/* Intro Section */}
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <h2 className="text-lg font-semibold text-blue-900 mb-2">Update Your Shop Information</h2>
+                <p className="text-sm text-blue-800">Edit your shop details, working hours, staff, and availability.</p>
+            </div>
+
             {saveError && (
                 <div className="bg-red-50 border border-red-200 text-red-800 text-sm rounded-lg px-4 py-3">
                     {saveError}
@@ -236,27 +243,60 @@ export default function EditShopInformation({ shop, barbers, workingHours, userE
                 <div className="space-y-4">
                     {DAYS_OF_WEEK.map((day) => (
                         <div key={day} className="space-y-3 pb-4 border-b border-gray-200 last:border-b-0 last:pb-0">
-                            <h3 className="text-sm font-medium text-gray-800">{day}</h3>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <label className="block">
-                                    <span className="text-xs font-medium text-gray-700 mb-1 block">Open Time</span>
-                                    <input
-                                        type="time"
-                                        value={hours[day]?.openTime || '09:00'}
-                                        onChange={(e) => handleTimeChange(day, 'openTime', e.target.value)}
-                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                                    />
-                                </label>
-                                <label className="block">
-                                    <span className="text-xs font-medium text-gray-700 mb-1 block">Close Time</span>
-                                    <input
-                                        type="time"
-                                        value={hours[day]?.closeTime || '18:00'}
-                                        onChange={(e) => handleTimeChange(day, 'closeTime', e.target.value)}
-                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                                    />
-                                </label>
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-sm font-medium text-gray-800">{day}</h3>
+                                {!hours[day]?.isOpen && (
+                                    <span className="text-xs font-semibold px-2.5 py-1 bg-red-100 text-red-700 rounded-full">
+                                        Closed
+                                    </span>
+                                )}
                             </div>
+                            
+                            {hours[day]?.isOpen ? (
+                                <>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <label className="block">
+                                            <span className="text-xs font-medium text-gray-700 mb-1 block">Open Time</span>
+                                            <input
+                                                type="time"
+                                                value={hours[day]?.openTime || '09:00'}
+                                                onChange={(e) => handleTimeChange(day, 'openTime', e.target.value)}
+                                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                            />
+                                        </label>
+                                        <label className="block">
+                                            <span className="text-xs font-medium text-gray-700 mb-1 block">Close Time</span>
+                                            <input
+                                                type="time"
+                                                value={hours[day]?.closeTime || '18:00'}
+                                                onChange={(e) => handleTimeChange(day, 'closeTime', e.target.value)}
+                                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                            />
+                                        </label>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setConfirmCloseDay(day)}
+                                        className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                                        aria-label={`Mark ${day} as closed`}
+                                    >
+                                        Mark as Closed
+                                    </button>
+                                </>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setHours((prev) => ({
+                                            ...prev,
+                                            [day]: { ...prev[day], isOpen: true },
+                                        }))
+                                    }}
+                                    className="text-xs font-medium text-indigo-600 hover:text-indigo-700"
+                                >
+                                    Open Shop
+                                </button>
+                            )}
                         </div>
                     ))}
                 </div>
@@ -287,6 +327,40 @@ export default function EditShopInformation({ shop, barbers, workingHours, userE
                     </div>
                 </div>
             </section>
+
+            {/* Confirm Mark as Closed - Modal */}
+            {confirmCloseDay && (
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+                    <div className="absolute inset-0 bg-black/50" onClick={() => setConfirmCloseDay(null)} />
+                    <div className="relative w-full sm:max-w-sm bg-white rounded-t-2xl sm:rounded-xl shadow-lg p-4 sm:p-6">
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900">Mark as Closed</h3>
+                        <p className="mt-2 text-sm text-gray-600">Are you sure you want to mark <span className="font-medium">{confirmCloseDay}</span> as closed?</p>
+                        <div className="mt-4 grid grid-cols-2 gap-3">
+                            <button
+                                type="button"
+                                className="w-full inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+                                onClick={() => setConfirmCloseDay(null)}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                className="w-full inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                                onClick={() => {
+                                    if (!confirmCloseDay) return
+                                    setHours((prev) => ({
+                                        ...prev,
+                                        [confirmCloseDay]: { ...prev[confirmCloseDay], isOpen: false },
+                                    }))
+                                    setConfirmCloseDay(null)
+                                }}
+                            >
+                                Yes, Close it
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Section: Shop Availability */}
             <section className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 md:p-6 space-y-4">
