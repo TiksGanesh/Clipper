@@ -26,7 +26,6 @@ export async function GET(req: Request) {
     const serviceIdsParam = url.searchParams.get('service_ids')
     const serviceDurationParam = url.searchParams.get('service_duration')
     const timezoneOffsetStr = url.searchParams.get('timezone_offset')
-    const debug = url.searchParams.get('debug') === '1'
 
     if (!barberId || !date) {
         return NextResponse.json({ error: 'Missing or invalid parameters' }, { status: 400 })
@@ -117,20 +116,6 @@ export async function GET(req: Request) {
         ? new Date(parsedDate.getTime() + timezoneOffsetMinutes * 60_000)
         : parsedDate
     const localDayOfWeek = localMarkerUtc.getUTCDay()
-
-    if (debug) {
-        return NextResponse.json({
-            debug: {
-                date,
-                timezoneOffsetMinutes,
-                parsedDate: parsedDate.toISOString(),
-                localMarkerUtc: localMarkerUtc.toISOString(),
-                localDayOfWeek,
-                utcDayOfWeek: dayRange.start.getUTCDay(),
-                shopId: (barber as any).shop_id,
-            }
-        })
-    }
 
     const { data: workingHours, error: hoursError } = await supabase
         .from('working_hours')
