@@ -180,16 +180,12 @@ export async function POST(req: Request) {
         }
     }
 
-    // Fetch lunch break times for the shop
-    const { data: shop, error: shopError } = await supabase
+    // Fetch lunch break times for the shop (non-blocking - if fails, just skip lunch logic)
+    const { data: shop } = await supabase
         .from('shops')
         .select('lunch_start, lunch_end')
         .eq('id', shopId!)
         .maybeSingle()
-
-    if (shopError) {
-        return NextResponse.json({ error: 'Failed to fetch shop data' }, { status: 500 })
-    }
 
     // Fetch same-day bookings for overlap check
     const { data: bookings, error: bookingsError } = await supabase
