@@ -219,13 +219,14 @@ export async function GET(req: Request) {
     const dayEnd = createDateFromLocal(date, '23:59:59', tzOffsetMinutes)
 
     // Fetch confirmed/completed bookings AND non-expired pending_payment holds
+    // Use overlap detection: booking overlaps if start_time < dayEnd AND end_time > dayStart
     const { data: bookings, error: bookingsError } = await supabase
         .from('bookings')
         .select('start_time, end_time, status, expires_at')
         .eq('barber_id', barberId)
         .is('deleted_at', null)
-        .gte('start_time', dayStart.toISOString())
-        .lte('start_time', dayEnd.toISOString())
+        .lt('start_time', dayEnd.toISOString())
+        .gt('end_time', dayStart.toISOString())
 
     if (bookingsError) {
         return NextResponse.json({ error: 'Failed to fetch bookings' }, { status: 500 })
@@ -235,7 +236,8 @@ export async function GET(req: Request) {
     // Treat pending_payment without expires_at as an active hold (defensive)
     const nowTs = new Date()
     const validBookings = (bookings ?? []).filter((booking: any) => {
-        const status = booking.status
+        // Normalize status to lowercase for case-insensitive comparison
+        const status = (booking.status || '').toLowerCase()
         if (status === 'confirmed' || status === 'completed') {
             return true
         }
@@ -318,6 +320,12 @@ export async function GET(req: Request) {
                 shopCloseUTC: shopCloseUTC.toISOString(),
                 firstSlotUTC: validSlots[0]?.start ?? null,
                 lastSlotUTC: validSlots[validSlots.length - 1]?.end ?? null,
+                rawBookings: (bookings ?? []).map((b: any) => ({
+                    start_time: b.start_time,
+                    end_time: b.end_time,
+                    status: b.status,
+                    expires_at: b.expires_at ?? null
+                })),
                 conflicts: (validBookings ?? []).map((b: any) => ({
                     start_time: b.start_time,
                     end_time: b.end_time,
