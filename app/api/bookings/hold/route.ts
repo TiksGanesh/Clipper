@@ -211,8 +211,8 @@ export async function POST(req: Request) {
         .select('id, status, expires_at')
         .eq('barber_id', barber_id)
         .is('deleted_at', null)
-        .gte('start_time', slotStart.toISOString())
         .lt('start_time', slotEnd.toISOString())
+        .gt('end_time', slotStart.toISOString())
 
     if (conflictError) {
         console.error('[bookings-hold] conflict check error', conflictError)
