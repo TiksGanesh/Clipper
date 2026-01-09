@@ -231,17 +231,21 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: 'Failed to fetch bookings' }, { status: 500 })
     }
 
-    // Filter to include only confirmed/completed and non-expired pending_payment bookings
+    // Filter to include only confirmed/completed and valid pending_payment holds
+    // Treat pending_payment without expires_at as an active hold (defensive)
+    const nowTs = new Date()
     const validBookings = (bookings ?? []).filter((booking: any) => {
         const status = booking.status
-        // Include confirmed and completed bookings
         if (status === 'confirmed' || status === 'completed') {
             return true
         }
-        // Include pending_payment bookings only if not expired
-        if (status === 'pending_payment' && booking.expires_at) {
+        if (status === 'pending_payment') {
+            if (!booking.expires_at) {
+                // Defensive: if expires_at missing, consider it an active hold to avoid double-booking
+                return true
+            }
             const expiresAt = new Date(booking.expires_at)
-            return expiresAt > new Date()
+            return expiresAt > nowTs
         }
         return false
     })
@@ -313,7 +317,13 @@ export async function GET(req: Request) {
                 shopOpenUTC: shopOpenUTC.toISOString(),
                 shopCloseUTC: shopCloseUTC.toISOString(),
                 firstSlotUTC: validSlots[0]?.start ?? null,
-                lastSlotUTC: validSlots[validSlots.length - 1]?.end ?? null
+                lastSlotUTC: validSlots[validSlots.length - 1]?.end ?? null,
+                conflicts: (validBookings ?? []).map((b: any) => ({
+                    start_time: b.start_time,
+                    end_time: b.end_time,
+                    status: b.status,
+                    expires_at: b.expires_at ?? null
+                }))
             }
         })
     }
