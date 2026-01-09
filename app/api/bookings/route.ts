@@ -17,7 +17,8 @@ const bookingSchema = z.object({
     timezone_offset: z.number().int().min(-720).max(720).optional(),
     razorpay_payment_id: z.string().optional(),
     razorpay_order_id: z.string().optional(),
-    amount: z.number().positive().max(1000000).optional()
+    amount: z.number().positive().max(1000000).optional(),
+    booking_id: z.string().uuid('Invalid booking ID').optional()
 }).refine(data => data.service_id || (data.service_ids && data.service_ids.length > 0), {
     message: 'Either service_id or service_ids must be provided',
     path: ['service_id']
@@ -61,7 +62,15 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
     }
 
-    const { barber_id, service_id, service_ids, slot_start, customer_name, customer_phone, date, timezone_offset, razorpay_payment_id, razorpay_order_id, amount } = body
+    const { barber_id, service_id, service_ids, slot_start, customer_name, customer_phone, date, timezone_offset, razorpay_payment_id, razorpay_order_id, amount, booking_id } = body
+
+    console.log('[booking-api] processing booking', {
+        isUpdate: !!booking_id,
+        bookingId: booking_id,
+        barber_id,
+        service_ids,
+        slot_start,
+    })
 
     // Resolve services (multi or single) and total duration
     let primaryServiceId: string | null = null
@@ -278,6 +287,77 @@ export async function POST(req: Request) {
             graceMs,
         })
         return NextResponse.json({ error: 'Cannot book past time' }, { status: 400 })
+    }
+
+    // If booking_id provided, update the pending_payment booking instead of creating new one
+    if (booking_id) {
+        console.log('[booking-api] updating pending booking', { booking_id })
+        
+        const { data: existingBooking, error: fetchError } = await supabase
+            .from('bookings')
+            .select('id, status, expires_at')
+            .eq('id', booking_id)
+            .maybeSingle()
+
+        if (fetchError) {
+            console.error('[booking-api] fetch pending booking error', fetchError)
+            return NextResponse.json({ error: 'Failed to fetch booking' }, { status: 500 })
+        }
+
+        if (!existingBooking || (existingBooking as any).status !== 'pending_payment') {
+            console.log('[booking-api] booking not found or not pending_payment', {
+                found: !!existingBooking,
+                status: (existingBooking as any)?.status
+            })
+            return NextResponse.json({ error: 'Booking hold not found or expired' }, { status: 400 })
+        }
+
+        // Check if hold is still valid
+        const expiresAt = new Date((existingBooking as any).expires_at)
+        if (expiresAt < new Date()) {
+            console.log('[booking-api] booking hold expired', { expiresAt })
+            return NextResponse.json({ error: 'Booking hold expired' }, { status: 400 })
+        }
+
+        // Update the pending booking to confirmed
+        const { error: updateError } = await (supabase as any)
+            .from('bookings')
+            .update({
+                status: 'confirmed',
+                customer_name: customer_name,
+                customer_phone: customer_phone,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', booking_id)
+
+        if (updateError) {
+            console.error('[booking-api] update booking error', updateError)
+            return NextResponse.json({ error: 'Failed to confirm booking' }, { status: 500 })
+        }
+
+        console.log('[booking-api] pending booking confirmed', { booking_id })
+
+        // Create payment record if payment details are provided
+        if (razorpay_order_id && amount !== undefined) {
+            const paymentInsert: Database['public']['Tables']['payments']['Insert'] = {
+                booking_id: booking_id,
+                razorpay_order_id: razorpay_order_id,
+                razorpay_payment_id: razorpay_payment_id || null,
+                amount: amount,
+                status: razorpay_payment_id ? 'paid' : 'created'
+            }
+            
+            const { error: paymentError } = await (supabase as any)
+                .from('payments')
+                .insert(paymentInsert)
+
+            if (paymentError) {
+                console.error('[booking-api] failed to create payment record:', paymentError)
+                // Note: Booking is already confirmed, so we don't rollback
+            }
+        }
+
+        return NextResponse.json({ booking_id: booking_id })
     }
 
     // Insert booking + services atomically via RPC; DB enforces non-overlap

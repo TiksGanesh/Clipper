@@ -218,18 +218,33 @@ export async function GET(req: Request) {
     const dayStart = createDateFromLocal(date, '00:00:00', tzOffsetMinutes)
     const dayEnd = createDateFromLocal(date, '23:59:59', tzOffsetMinutes)
 
+    // Fetch confirmed/completed bookings AND non-expired pending_payment holds
     const { data: bookings, error: bookingsError } = await supabase
         .from('bookings')
-        .select('start_time, end_time')
+        .select('start_time, end_time, status, expires_at')
         .eq('barber_id', barberId)
         .is('deleted_at', null)
-        .in('status', ['confirmed', 'completed'])
         .gte('start_time', dayStart.toISOString())
         .lte('start_time', dayEnd.toISOString())
 
     if (bookingsError) {
         return NextResponse.json({ error: 'Failed to fetch bookings' }, { status: 500 })
     }
+
+    // Filter to include only confirmed/completed and non-expired pending_payment bookings
+    const validBookings = (bookings ?? []).filter((booking: any) => {
+        const status = booking.status
+        // Include confirmed and completed bookings
+        if (status === 'confirmed' || status === 'completed') {
+            return true
+        }
+        // Include pending_payment bookings only if not expired
+        if (status === 'pending_payment' && booking.expires_at) {
+            const expiresAt = new Date(booking.expires_at)
+            return expiresAt > new Date()
+        }
+        return false
+    })
 
     // === STEP C & D: Generate and filter slots ===
     const validSlots: Array<{ start: string; end: string }> = []
@@ -265,7 +280,7 @@ export async function GET(req: Request) {
         const slotEndTimestamp = new Date(slotStart.getTime() + totalDuration * 60000)
 
         // === FILTER 3: Existing Bookings Check ===
-        const hasConflict = bookings?.some((booking) => {
+        const hasConflict = validBookings?.some((booking) => {
             const bookingStart = new Date((booking as any).start_time)
             const bookingEnd = new Date((booking as any).end_time)
             
