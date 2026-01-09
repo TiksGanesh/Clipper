@@ -477,6 +477,14 @@ export default function BookingForm({ shop, barbers, services }: Props) {
         }
     }, [paymentStatus])
 
+    // Auto-dismiss errorMessage after 4 seconds
+    useEffect(() => {
+        if (errorMessage) {
+            const timer = setTimeout(() => setErrorMessage(''), 4000)
+            return () => clearTimeout(timer)
+        }
+    }, [errorMessage])
+
     const hasAnySlots = groupedSlots.morning.length > 0 || groupedSlots.afternoon.length > 0 || groupedSlots.evening.length > 0
 
     // --- Render ---
@@ -590,9 +598,7 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                 </div>
             )}
 
-            <form onSubmit={handlePaymentAndBooking} className="pb-24 max-w-2xl mx-auto"> 
-            {/* Added pb-24 to prevent content being hidden behind sticky footer */}
-            
+            <form onSubmit={handlePaymentAndBooking} className="pb-48 max-w-2xl mx-auto">
             <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
 
             <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 space-y-8">
@@ -901,11 +907,19 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                      </div>
                 </section>
 
-                {error && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg text-center font-medium">{error}</div>}
             </div>
 
-            {/* Smart Sticky Footer */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-50 px-4 py-4 md:py-5">
+            {/* Top Error Snackbar */}
+            {errorMessage && (
+                <div className="fixed top-4 left-4 right-4 z-40 bg-red-600 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center justify-between animate-in slide-in-from-top-5 duration-300">
+                    <span className="font-medium text-sm">{errorMessage}</span>
+                    <button onClick={() => setErrorMessage('')} className="text-white/80 hover:text-white ml-4 flex-shrink-0">✕</button>
+                </div>
+            )}
+
+            {/* Smart Sticky Footer - Hidden during payment processing */}
+            {paymentStatus === 'idle' && (
+                <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-50 px-4 py-4 md:py-5">
                 <div className="max-w-2xl mx-auto space-y-3">
                     {/* Payment Breakup */}
                     <div className="bg-gray-50 rounded-lg p-3 space-y-2">
@@ -947,6 +961,7 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                     </p>
                 </div>
             </div>
+            )}
         </form>
         </>
     )
