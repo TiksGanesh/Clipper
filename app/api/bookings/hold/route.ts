@@ -22,9 +22,15 @@ export async function POST(req: Request) {
 
     try {
         const rawBody = await req.json()
+        console.log('[bookings-hold] raw request body:', JSON.stringify(rawBody, null, 2))
+        
         const validation = holdSchema.safeParse(rawBody)
         
         if (!validation.success) {
+            console.error('[bookings-hold] validation failed', {
+                issues: validation.error.issues,
+                body: rawBody
+            })
             return NextResponse.json({ 
                 error: 'Invalid input', 
                 details: validation.error.issues 
@@ -32,7 +38,9 @@ export async function POST(req: Request) {
         }
         
         body = validation.data
+        console.log('[bookings-hold] validation passed', { body })
     } catch (error) {
+        console.error('[bookings-hold] JSON parse error', { error })
         return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
     }
 
@@ -57,19 +65,45 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Failed to fetch services' }, { status: 500 })
     }
 
+    console.log('[bookings-hold] services fetched', {
+        requestedCount: service_ids.length,
+        fetchedCount: services?.length ?? 0,
+        services: services
+    })
+
     if (!services || services.length !== service_ids.length) {
+        console.warn('[bookings-hold] service count mismatch', {
+            requested: service_ids,
+            found: services?.map((s: any) => s.id) ?? []
+        })
         return NextResponse.json({ error: 'Some services not found' }, { status: 400 })
     }
 
-    if ((services as any[]).some((s) => s.deleted_at || s.is_active === false)) {
+    // Check for inactive or deleted services
+    const inactiveOrDeleted = (services as any[]).filter((s) => s.deleted_at || s.is_active === false)
+    if (inactiveOrDeleted.length > 0) {
+        console.warn('[bookings-hold] inactive/deleted services found', {
+            inactiveServices: inactiveOrDeleted
+        })
         return NextResponse.json({ error: 'Some services are inactive' }, { status: 400 })
     }
 
     // Ensure all services belong to same shop
     const shopId = (services as any[])[0].shop_id
-    if ((services as any[]).some((s) => s.shop_id !== shopId)) {
+    const multipleShops = (services as any[]).filter((s) => s.shop_id !== shopId)
+    if (multipleShops.length > 0) {
+        console.warn('[bookings-hold] services from different shops', {
+            expectedShop: shopId,
+            servicesFromOtherShops: multipleShops
+        })
         return NextResponse.json({ error: 'Services must belong to the same shop' }, { status: 400 })
     }
+
+    console.log('[bookings-hold] services validation passed', {
+        shopId,
+        serviceCount: services.length,
+        totalDuration: (services as any[]).reduce((sum, s) => sum + (s.duration_minutes || 0), 0)
+    })
 
     // Calculate total duration
     const totalDuration = (services as any[]).reduce((sum, s) => sum + (s.duration_minutes || 0), 0)
@@ -86,13 +120,59 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Failed to fetch barber' }, { status: 500 })
     }
 
-    if (!barber || (barber as any).deleted_at || (barber as any).is_active === false || (barber as any).shop_id !== shopId) {
+    console.log('[bookings-hold] barber fetched', {
+        barberId: barber_id,
+        barber: barber ? {
+            id: (barber as any).id,
+            shop_id: (barber as any).shop_id,
+            is_active: (barber as any).is_active,
+            deleted_at: (barber as any).deleted_at
+        } : null,
+        expectedShop: shopId
+    })
+
+    if (!barber) {
+        console.warn('[bookings-hold] barber not found', { barberId: barber_id })
         return NextResponse.json({ error: 'Barber not available for this shop' }, { status: 400 })
     }
 
+    if ((barber as any).deleted_at) {
+        console.warn('[bookings-hold] barber is deleted', { barberId: barber_id, deleted_at: (barber as any).deleted_at })
+        return NextResponse.json({ error: 'Barber not available for this shop' }, { status: 400 })
+    }
+
+    if ((barber as any).is_active === false) {
+        console.warn('[bookings-hold] barber is inactive', { barberId: barber_id })
+        return NextResponse.json({ error: 'Barber not available for this shop' }, { status: 400 })
+    }
+
+    if ((barber as any).shop_id !== shopId) {
+        console.warn('[bookings-hold] barber from different shop', {
+            barberId: barber_id,
+            barberShop: (barber as any).shop_id,
+            expectedShop: shopId
+        })
+        return NextResponse.json({ error: 'Barber not available for this shop' }, { status: 400 })
+    }
+
+    console.log('[bookings-hold] barber validation passed', {
+        barberId: barber_id,
+        shopId
+    })
+
     // Check subscription access
     const accessCheck = await checkSubscriptionAccess(shopId as string)
+    console.log('[bookings-hold] subscription access check', {
+        shopId,
+        allowed: accessCheck.allowed,
+        reason: (accessCheck as any).reason
+    })
+    
     if (!accessCheck.allowed) {
+        console.warn('[bookings-hold] subscription not active', {
+            shopId,
+            reason: (accessCheck as any).reason
+        })
         return NextResponse.json({ error: 'Shop subscription is not active' }, { status: 403 })
     }
 
@@ -100,15 +180,25 @@ export async function POST(req: Request) {
     let slotStart: Date
     try {
         slotStart = new Date(slot_time)
+        console.log('[bookings-hold] parsing slot_time', {
+            slotTimeInput: slot_time,
+            parsed: slotStart.toISOString(),
+            valid: !isNaN(slotStart.getTime())
+        })
+        
         if (isNaN(slotStart.getTime())) {
             throw new Error('Invalid date')
         }
-    } catch {
+    } catch (err) {
+        console.error('[bookings-hold] slot_time parse error', {
+            slotTime: slot_time,
+            error: err instanceof Error ? err.message : String(err)
+        })
         return NextResponse.json({ error: 'Invalid slot_time format' }, { status: 400 })
     }
 
     const slotEnd = new Date(slotStart.getTime() + totalDuration * 60000)
-
+    
     console.log('[bookings-hold] calculated slot times', {
         slotStart: slotStart.toISOString(),
         slotEnd: slotEnd.toISOString(),
@@ -129,6 +219,20 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Failed to check slot availability' }, { status: 500 })
     }
 
+    console.log('[bookings-hold] conflict check query result', {
+        barberId: barber_id,
+        timeRange: {
+            start: slotStart.toISOString(),
+            end: slotEnd.toISOString()
+        },
+        conflictingBookingsFound: conflictingBookings?.length ?? 0,
+        bookings: conflictingBookings?.map((b: any) => ({
+            id: b.id,
+            status: b.status,
+            expires_at: b.expires_at
+        })) ?? []
+    })
+
     // Check if any conflicting bookings exist
     if (conflictingBookings && conflictingBookings.length > 0) {
         const hasConfirmedOrCompleted = (conflictingBookings as any[]).some(
@@ -138,14 +242,27 @@ export async function POST(req: Request) {
             b => b.status === 'pending_payment' && new Date(b.expires_at) > new Date()
         )
 
+        console.log('[bookings-hold] conflict analysis', {
+            totalConflicts: conflictingBookings.length,
+            hasConfirmed: hasConfirmedOrCompleted,
+            hasValidHold: hasValidHold,
+            details: (conflictingBookings as any[]).map(b => ({
+                status: b.status,
+                expires_at: b.expires_at,
+                isExpired: b.status === 'pending_payment' && new Date(b.expires_at) <= new Date()
+            }))
+        })
+
         if (hasConfirmedOrCompleted || hasValidHold) {
-            console.log('[bookings-hold] slot conflict detected', {
+            console.warn('[bookings-hold] slot conflict detected', {
                 conflictCount: conflictingBookings.length,
                 hasConfirmed: hasConfirmedOrCompleted,
                 hasValidHold
             })
             return NextResponse.json({ error: 'Slot is not available' }, { status: 409 })
         }
+    } else {
+        console.log('[bookings-hold] no conflicts found - slot is available')
     }
 
     // Create pending_payment booking with expiry
@@ -153,6 +270,17 @@ export async function POST(req: Request) {
     
     // We need a service_id for the bookings table; use the first service
     const primaryServiceId = (services as any[])[0].id
+
+    console.log('[bookings-hold] preparing booking insert', {
+        shopId,
+        barberId: barber_id,
+        primaryServiceId,
+        startTime: slotStart.toISOString(),
+        endTime: slotEnd.toISOString(),
+        status: 'pending_payment',
+        expiresAt: expiresAt.toISOString(),
+        holdDurationMinutes: HOLD_DURATION_MINUTES
+    })
 
     const { data: holdBooking, error: holdError } = await (supabase as any)
         .from('bookings')
@@ -172,10 +300,16 @@ export async function POST(req: Request) {
         .single()
 
     if (holdError) {
-        console.error('[bookings-hold] insert error', holdError)
+        console.error('[bookings-hold] insert error', {
+            message: holdError.message,
+            code: holdError.code,
+            details: holdError.details,
+            hint: (holdError as any).hint
+        })
         
         // Check if error is due to overlap (our trigger might have caught it)
         if (holdError.message && holdError.message.includes('overlaps')) {
+            console.warn('[bookings-hold] overlap detected at database level')
             return NextResponse.json({ error: 'Slot is not available' }, { status: 409 })
         }
         
@@ -184,7 +318,8 @@ export async function POST(req: Request) {
 
     console.log('[bookings-hold] hold created successfully', {
         bookingId: (holdBooking as any).id,
-        expiresAt: expiresAt.toISOString()
+        expiresAt: expiresAt.toISOString(),
+        createdAt: new Date().toISOString()
     })
 
     return NextResponse.json({
