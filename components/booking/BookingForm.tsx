@@ -80,7 +80,6 @@ export default function BookingForm({ shop, barbers, services }: Props) {
 
     // UI State
     const [slotsLoading, setSlotsLoading] = useState(false)
-    const [error, setError] = useState<string>('')
     const [submitting, setSubmitting] = useState(false)
     const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'failed'>('idle')
     const [errorMessage, setErrorMessage] = useState('')
@@ -135,7 +134,7 @@ export default function BookingForm({ shop, barbers, services }: Props) {
         const controller = new AbortController()
         const fetchSlots = async () => {
             setSlotsLoading(true)
-            setError('')
+            setErrorMessage('')
             try {
                 const params = new URLSearchParams({
                     barber_id: barberId,
@@ -144,11 +143,15 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                     timezone_offset: String(timezoneOffset),
                 })
                 const res = await fetch(`/api/slots?${params.toString()}`, { signal: controller.signal })
-                if (!res.ok) throw new Error('Failed to load slots')
-                const body = await res.json()
+                const body = await res.json().catch(() => ({} as any))
+                if (!res.ok) {
+                    const apiError = body?.error || 'Unable to load slots. Please try again.'
+                    throw new Error(apiError)
+                }
                 setSlots(body.slots ?? [])
             } catch (err: any) {
                 if (err.name === 'AbortError') return
+                setErrorMessage(err?.message || 'Unable to load slots. Please try again.')
                 setSlots([])
             } finally {
                 setSlotsLoading(false)
@@ -162,15 +165,15 @@ export default function BookingForm({ shop, barbers, services }: Props) {
     // --- Payment Logic ---
     const handlePaymentAndBooking = async (e: React.FormEvent) => {
         e.preventDefault()
-        setError('')
+        setErrorMessage('')
 
         // Clean phone for submission
         const cleanPhone = customerPhone.replace(/\s/g, '')
 
-        if (!barberId) return setError('Please select a barber')
-        if (serviceIds.length === 0) return setError('Please select a service')
-        if (!date || !selectedSlot) return setError('Please select a time slot')
-        if (!customerName.trim() || cleanPhone.length < 10) return setError('Please enter valid details')
+        if (!barberId) return setErrorMessage('Please select a barber')
+        if (serviceIds.length === 0) return setErrorMessage('Please select a service')
+        if (!date || !selectedSlot) return setErrorMessage('Please select a time slot')
+        if (!customerName.trim() || cleanPhone.length < 10) return setErrorMessage('Please enter valid details')
 
         setSubmitting(true)
 
@@ -209,9 +212,9 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                 setSubmitting(false)
                 
                 if (holdRes.status === 409) {
-                    return setError('This slot is no longer available. Please select another time.')
+                    return setErrorMessage('This slot is no longer available. Please select another time.')
                 }
-                return setError(holdError.error || 'Failed to reserve slot')
+                return setErrorMessage(holdError.error || 'Failed to reserve slot')
             }
 
             const holdData = await holdRes.json()
@@ -242,7 +245,7 @@ export default function BookingForm({ shop, barbers, services }: Props) {
             const razorpayKeyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
             if (!razorpayKeyId) {
                 setSubmitting(false)
-                return setError('Payment configuration missing.')
+                return setErrorMessage('Payment configuration missing.')
             }
 
             const options = {
@@ -308,7 +311,7 @@ export default function BookingForm({ shop, barbers, services }: Props) {
 
         } catch (err: any) {
             console.error("Payment Init Error:", err)
-            setError(err.message || "Something went wrong")
+            setErrorMessage(err.message || "Something went wrong")
             setSubmitting(false)
             // Clear the hold on error
             setHoldBookingId(null)
