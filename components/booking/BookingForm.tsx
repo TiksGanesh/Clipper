@@ -141,8 +141,16 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                     date,
                     service_ids: serviceIds.join(','),
                     timezone_offset: String(timezoneOffset),
+                    _t: String(new Date().getTime()), // Timestamp buster
                 })
-                const res = await fetch(`/api/slots?${params.toString()}`, { signal: controller.signal })
+                const res = await fetch(`/api/slots?${params.toString()}`, {
+                    signal: controller.signal,
+                    cache: 'no-store',
+                    headers: {
+                        'Pragma': 'no-cache',
+                        'Cache-Control': 'no-cache'
+                    }
+                })
                 const body = await res.json().catch(() => ({} as any))
                 if (!res.ok) {
                     const apiError = body?.error || 'Unable to load slots. Please try again.'

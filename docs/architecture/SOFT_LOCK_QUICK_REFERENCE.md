@@ -9,10 +9,10 @@
 | `app/api/bookings/cleanup.ts` | API Route | Cleans up expired holds |
 | `app/api/bookings/route.ts` | API Route | Updated to handle booking_id |
 | `components/booking/BookingForm.tsx` | Component | Calls hold API before payment |
-| `docs/SOFT_LOCK_IMPLEMENTATION.md` | Docs | Complete implementation guide |
-| `docs/SOFT_LOCK_ARCHITECTURE.md` | Docs | Architecture diagrams |
-| `docs/SOFT_LOCK_CHANGE_SUMMARY.md` | Docs | Summary of all changes |
-| `docs/SOFT_LOCK_TESTING.sh` | Script | Integration testing guide |
+| `docs/architecture/SOFT_LOCK_IMPLEMENTATION.md` | Docs | Complete implementation guide |
+| `docs/architecture/SOFT_LOCK_ARCHITECTURE.md` | Docs | Architecture diagrams |
+| `docs/architecture/SOFT_LOCK_CHANGE_SUMMARY.md` | Docs | Summary of all changes |
+| `docs/architecture/SOFT_LOCK_TESTING.sh` | Script | Integration testing guide |
 
 ## Key Changes Summary
 

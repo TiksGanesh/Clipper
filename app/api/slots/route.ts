@@ -5,6 +5,8 @@ import { checkSubscriptionAccess } from '@/lib/subscription-access'
 
 // Force dynamic rendering for this API route
 export const dynamic = 'force-dynamic'
+export const revalidate = 0
+export const fetchCache = 'force-no-store'
 // Ensure Node.js runtime on Vercel for Supabase server client compatibility
 export const runtime = 'nodejs'
 
@@ -336,5 +338,9 @@ export async function GET(req: Request) {
         })
     }
 
-    return NextResponse.json({ slots: validSlots })
+    const response = NextResponse.json({ slots: validSlots })
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+    response.headers.set('Pragma', 'no-cache')
+    response.headers.set('Expires', '0')
+    return response
 }

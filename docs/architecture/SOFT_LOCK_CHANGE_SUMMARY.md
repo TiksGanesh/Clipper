@@ -26,7 +26,7 @@ Implemented a robust soft lock (hold) mechanism to prevent double-bookings where
 - Optional authorization via `CLEANUP_SECRET` environment variable
 - Soft deletes expired bookings (sets `deleted_at`)
 
-### 4. **Documentation: `/docs/SOFT_LOCK_IMPLEMENTATION.md`**
+### 4. **Documentation: `/docs/architecture/SOFT_LOCK_IMPLEMENTATION.md`**
 - Complete implementation guide
 - API endpoint specifications
 - Database changes explanation

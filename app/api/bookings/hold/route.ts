@@ -4,6 +4,11 @@ import { computeAvailableSlots, getUtcDayRange } from '@/lib/slots'
 import { checkSubscriptionAccess } from '@/lib/subscription-access'
 import { z } from 'zod'
 
+// Force dynamic rendering to prevent stale data
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+export const fetchCache = 'force-no-store'
+
 // Validation schema for hold request
 const holdSchema = z.object({
     barber_id: z.string().uuid('Invalid barber ID'),
@@ -322,8 +327,12 @@ export async function POST(req: Request) {
         createdAt: new Date().toISOString()
     })
 
-    return NextResponse.json({
+    const response = NextResponse.json({
         bookingId: (holdBooking as any).id,
         expiresAt: expiresAt.toISOString()
     }, { status: 200 })
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+    response.headers.set('Pragma', 'no-cache')
+    response.headers.set('Expires', '0')
+    return response
 }
