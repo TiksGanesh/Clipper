@@ -20,6 +20,7 @@ export default function BookingConfirmedPage({
   const timeStr = searchParams.time || ''
   const customer = searchParams.customer || ''
   const paymentId = searchParams.payment_id || ''
+  const bookingId = searchParams.booking_id || ''
   const status = searchParams.status === 'failed' ? 'failed' : 'success'
   const error = searchParams.error
   const isWalkIn = searchParams.is_walk_in === 'true'
@@ -154,6 +155,16 @@ export default function BookingConfirmedPage({
             </div>
           </div>
 
+          {/* Booking ID */}
+          {status === 'success' && bookingId && (
+            <div className="border-t border-gray-200 pt-4">
+              <p className="text-sm text-gray-600 mb-2">Booking ID</p>
+              <p className="text-sm font-mono bg-gray-50 p-3 rounded border border-gray-200 text-gray-800 break-all">
+                {bookingId}
+              </p>
+            </div>
+          )}
+
           {/* Payment Status */}
           <div className="border-t border-gray-200 pt-4">
             {status === 'success' ? (
@@ -186,34 +197,46 @@ export default function BookingConfirmedPage({
           )}
         </div>
 
-        {/* Primary Action */}
-        <button
-          type="button"
-          onClick={() => {
-            if (status === 'failed') {
-              if (shopId) {
-                router.push(`/book/${shopId}`)
-              } else {
-                router.back()
+        {/* Action Buttons */}
+        <div className="space-y-3">
+          {status === 'success' && bookingId && (
+            <button
+              type="button"
+              onClick={() => router.push(`/track/${bookingId}`)}
+              className="w-full bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-medium py-3 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all"
+            >
+              Track Booking Status
+            </button>
+          )}
+          
+          <button
+            type="button"
+            onClick={() => {
+              if (status === 'failed') {
+                if (shopId) {
+                  router.push(`/book/${shopId}`)
+                } else {
+                  router.back()
+                }
+                return
               }
-              return
-            }
 
-            if (isWalkIn) {
-              router.push('/dashboard')
-            } else {
-              // Redirect to booking form for new booking or home if no shop_id
-              if (shopId) {
-                router.push(`/book/${shopId}`)
+              if (isWalkIn) {
+                router.push('/dashboard')
               } else {
-                router.push('/')
+                // Redirect to booking form for new booking or home if no shop_id
+                if (shopId) {
+                  router.push(`/book/${shopId}`)
+                } else {
+                  router.push('/')
+                }
               }
-            }
-          }}
-          className={`w-full ${status === 'failed' ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' : (isWalkIn ? 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500' : 'bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500')} text-white font-medium py-3 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors`}
-        >
-          {status === 'failed' ? 'Retry Payment' : (isWalkIn ? 'Go to Dashboard' : 'Done')}
-        </button>
+            }}
+            className={`w-full ${status === 'failed' ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' : (isWalkIn ? 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500' : 'bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500')} text-white font-medium py-3 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors`}
+          >
+            {status === 'failed' ? 'Retry Payment' : (isWalkIn ? 'Go to Dashboard' : 'Done')}
+          </button>
+        </div>
       </div>
     </div>
   );

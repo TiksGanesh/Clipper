@@ -353,6 +353,9 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                 throw new Error('Booking confirmation failed')
             }
 
+            const resData = await res.json()
+            const confirmedBookingId = resData.booking_id || bookingId
+
             const selectedBarber = barbers.find(b => b.id === barberId)
             const bookingParams = new URLSearchParams({
                 status: 'success',
@@ -363,7 +366,8 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                 time: selectedSlot,
                 customer: customerName.trim(),
                 phone: finalPhone,
-                payment_id: paymentId
+                payment_id: paymentId,
+                booking_id: confirmedBookingId
             })
             router.push(`/booking-confirmed?${bookingParams.toString()}`)
 
@@ -400,6 +404,9 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                 throw new Error('Booking failed after payment')
             }
 
+            const resData = await res.json()
+            const bookingId = resData.booking_id
+
             const selectedBarber = barbers.find(b => b.id === barberId)
             const bookingParams = new URLSearchParams({
                 status: 'success',
@@ -410,7 +417,8 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                 time: selectedSlot,
                 customer: customerName.trim(),
                 phone: finalPhone,
-                payment_id: paymentId
+                payment_id: paymentId,
+                booking_id: bookingId
             })
             router.push(`/booking-confirmed?${bookingParams.toString()}`)
 

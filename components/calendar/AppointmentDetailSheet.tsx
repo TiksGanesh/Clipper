@@ -1,6 +1,6 @@
 'use client'
 
-type AppointmentStatus = 'confirmed' | 'completed' | 'no_show' | 'canceled'
+type AppointmentStatus = 'confirmed' | 'seated' | 'completed' | 'no_show' | 'canceled'
 
 type Props = {
     isOpen: boolean
@@ -16,16 +16,18 @@ type Props = {
     duration: number
     isWalkIn?: boolean
     // Actions
+    onSeatCustomer?: () => void
     onMarkCompleted?: () => void
     onMarkNoShow?: () => void
     onCancel?: () => void
 }
 
 const STATUS_CONFIG = {
-    confirmed: { label: 'Upcoming', bgColor: 'bg-blue-100', textColor: 'text-blue-800' },
-    completed: { label: 'Completed', bgColor: 'bg-emerald-100', textColor: 'text-emerald-800' },
+    confirmed: { label: 'Waiting', bgColor: 'bg-blue-100', textColor: 'text-blue-800' },
+    seated: { label: 'In Chair', bgColor: 'bg-green-100', textColor: 'text-green-800' },
+    completed: { label: 'Completed', bgColor: 'bg-gray-100', textColor: 'text-gray-800' },
     no_show: { label: 'No-show', bgColor: 'bg-orange-100', textColor: 'text-orange-800' },
-    canceled: { label: 'Cancelled', bgColor: 'bg-gray-100', textColor: 'text-gray-800' },
+    canceled: { label: 'Cancelled', bgColor: 'bg-red-100', textColor: 'text-red-800' },
 }
 
 export default function AppointmentDetailSheet({
@@ -40,13 +42,14 @@ export default function AppointmentDetailSheet({
     dateTime,
     duration,
     isWalkIn = false,
+    onSeatCustomer,
     onMarkCompleted,
     onMarkNoShow,
     onCancel,
 }: Props) {
     if (!isOpen) return null
 
-    const statusConfig = STATUS_CONFIG[status]
+    const statusConfig = STATUS_CONFIG[status] || STATUS_CONFIG['confirmed']
 
     return (
         <>
@@ -133,12 +136,12 @@ export default function AppointmentDetailSheet({
                                 <button
                                     type="button"
                                     onClick={() => {
-                                        onMarkCompleted?.()
+                                        onSeatCustomer?.()
                                         onClose()
                                     }}
-                                    className="w-full bg-emerald-600 text-white font-medium py-3 px-4 rounded-lg hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-colors"
+                                    className="w-full bg-green-600 text-white font-medium py-3 px-4 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
                                 >
-                                    Mark Completed
+                                    ✂️ Seat Customer
                                 </button>
                                 <button
                                     type="button"
@@ -148,7 +151,7 @@ export default function AppointmentDetailSheet({
                                     }}
                                     className="w-full bg-white text-gray-700 font-medium py-3 px-4 rounded-lg border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
                                 >
-                                    Mark No-show
+                                    ❌ No-show
                                 </button>
                                 <button
                                     type="button"
@@ -159,6 +162,31 @@ export default function AppointmentDetailSheet({
                                     className="w-full text-red-600 font-medium py-2 px-4 hover:text-red-700 focus:outline-none focus:underline transition-colors"
                                 >
                                     Cancel Appointment
+                                </button>
+                            </div>
+                        )}
+
+                        {status === 'seated' && (
+                            <div className="space-y-3">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        onMarkCompleted?.()
+                                        onClose()
+                                    }}
+                                    className="w-full bg-emerald-600 text-white font-medium py-3 px-4 rounded-lg hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-colors"
+                                >
+                                    ✅ Complete
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        onCancel?.()
+                                        onClose()
+                                    }}
+                                    className="w-full text-gray-600 font-medium py-2 px-4 hover:text-gray-700 focus:outline-none focus:underline transition-colors"
+                                >
+                                    Cancel
                                 </button>
                             </div>
                         )}
