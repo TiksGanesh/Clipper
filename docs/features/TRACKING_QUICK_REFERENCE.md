@@ -19,7 +19,7 @@
 - **API Cache Headers**: `no-store, no-cache, max-age=0, must-revalidate`
 - **Page Configuration**: `export const dynamic = 'force-dynamic'`
 - **SWR Settings**: `dedupingInterval: 0` (no deduplication)
-- **Polling**: Every 30 seconds + on focus + on reconnect
+- **Polling**: Every 10 seconds + on focus + on reconnect
 - **Result**: Never shows stale queue position or delays
 
 ---
@@ -53,7 +53,7 @@
    - Real-time queue position
    - Expected start time with delays
    - Current shop activity
-   - Auto-refreshes every 30 seconds
+   - Auto-refreshes every 10 seconds
    ↓
 6. Data always fresh (never cached)
 ```
@@ -72,7 +72,7 @@ Expires: 0
 ### SWR Configuration
 ```typescript
 {
-  refreshInterval: 30000,        // 30 seconds
+  refreshInterval: 10000,        // 10 seconds
   revalidateOnFocus: true,       // Refresh when tab active
   revalidateOnReconnect: true,   // Refresh when internet back
   dedupingInterval: 0,           // No deduplication
@@ -112,7 +112,7 @@ export const revalidate = 0             // No static caching
 1. Open tracking page
 2. Note the queue position
 3. Create another booking for same barber/time
-4. Refresh or wait 30 seconds
+4. Refresh or wait 10 seconds
 5. Queue position should update
 ```
 
@@ -141,7 +141,7 @@ curl -I https://yourapp.com/api/track?booking_id=<uuid>
 
 ## Performance
 - **API Response**: ~1-2 KB
-- **Polling Interval**: 30 seconds
+- **Polling Interval**: 10 seconds
 - **Page Load Time**: <1 second
 - **First Paint**: Instant
 - **Tracking Page Size**: 44.7 KB (132 KB First Load JS)

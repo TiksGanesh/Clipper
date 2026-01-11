@@ -120,7 +120,7 @@ const { data, error, isLoading } = useSWR<TrackingResponse>(
     bookingId ? `/api/track?booking_id=${bookingId}` : null,
     fetcher,
     {
-        refreshInterval: 30000, // 30 seconds
+        refreshInterval: 10000, // 10 seconds
         revalidateOnFocus: true, // Refresh when tab regains focus
         revalidateOnReconnect: true, // Refresh when connection restored
         dedupingInterval: 0, // Disable deduping for fresh requests
@@ -130,7 +130,7 @@ const { data, error, isLoading } = useSWR<TrackingResponse>(
 ```
 
 **SWR Options Explanation**:
-- `refreshInterval: 30000` - Auto-fetch every 30 seconds
+- `refreshInterval: 10000` - Auto-fetch every 10 seconds
 - `revalidateOnFocus: true` - Refetch when user returns to tab
 - `revalidateOnReconnect: true` - Refetch when internet reconnected
 - `dedupingInterval: 0` - No deduplication (every request is fresh)
@@ -219,7 +219,7 @@ const { data, error, isLoading } = useSWR<TrackingResponse>(
 4. **Verify Fresh Data**
    - ✅ Open tracking page
    - ✅ Update barber `current_delay_minutes` in database
-   - ✅ Refresh page - delay updates within 30 seconds
+   - ✅ Refresh page - delay updates within 10 seconds
    - ✅ Close tab and reopen - shows fresh data
    - ✅ Switch between tabs and back - refreshes on focus
 

@@ -4,6 +4,28 @@ import type { Database } from '@/types/database'
 
 type BookingStatus = Database['public']['Enums']['booking_status']
 
+type TrackingResponse = {
+    booking: {
+        id: string
+        original_start: string
+        service_name: string
+        barber_name: string
+        customer_name: string
+        status: BookingStatus
+        duration_minutes: number
+    }
+    live_status: {
+        is_delayed: boolean
+        delay_minutes: number
+        expected_start: string
+        queue_position: number
+        people_ahead: number
+        current_activity: string
+        timestamp: string
+    }
+    debug_queue?: Array<{ id: string; status: string; start_time: string }>
+}
+
 // Mark this route as dynamic to prevent Next.js caching
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -37,8 +59,16 @@ export async function GET(request: NextRequest) {
         }
 
         // Create fresh Supabase client per request with aggressive no-cache settings
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+        if (!supabaseUrl || !supabaseServiceKey) {
+            console.error('Supabase environment variables NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY are not set')
+            return NextResponse.json(
+                { error: 'Service configuration error. Please contact support.' },
+                { status: 500 }
+            )
+        }
         
         const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey, {
             db: {
@@ -81,7 +111,7 @@ export async function GET(request: NextRequest) {
             )
         }
 
-        if (checkBooking && checkBooking.deleted_at) {
+        if (checkBooking.deleted_at) {
             console.error('Booking is deleted:', { bookingId })
             return NextResponse.json(
                 { error: 'This booking has been cancelled' },
@@ -100,6 +130,7 @@ export async function GET(request: NextRequest) {
                 customer_name,
                 barber_id,
                 service_id,
+                shop_id,
                 services (
                     name,
                     duration_minutes
@@ -131,6 +162,7 @@ export async function GET(request: NextRequest) {
             customer_name: string
             barber_id: string
             service_id: string
+            shop_id: string
             services: { name: string; duration_minutes: number } | null
             barbers: { id: string; name: string; current_delay_minutes: number } | null
         }
@@ -158,6 +190,7 @@ export async function GET(request: NextRequest) {
             .from('bookings')
             .select('id, status, start_time')
             .eq('barber_id', barberId)
+            .eq('shop_id', bookingData.shop_id)
             .in('status', ['confirmed', 'seated'] as BookingStatus[])
             .lt('start_time', bookingData.start_time)
             .gte('start_time', todayStart.toISOString())
@@ -194,6 +227,7 @@ export async function GET(request: NextRequest) {
                 )
             `)
             .eq('barber_id', barberId)
+            .eq('shop_id', bookingData.shop_id)
             .eq('status', 'seated' as BookingStatus)
             .is('deleted_at', null)
             .gte('start_time', todayStart.toISOString())
@@ -229,7 +263,7 @@ export async function GET(request: NextRequest) {
             })
         }
 
-        const response: any = {
+        const response: TrackingResponse = {
             booking: {
                 id: bookingData.id,
                 original_start: formatTime(bookingStartTime),

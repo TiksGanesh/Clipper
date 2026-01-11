@@ -314,7 +314,7 @@ export default function TrackBookingPage() {
 
                         {/* Auto-refresh notice */}
                         <div className="text-center text-sm text-gray-500">
-                            <p>Status updates automatically every 30 seconds</p>
+                            <p>Status updates automatically every 10 seconds</p>
                             <p className="text-xs mt-1">
                                 Last updated: {new Date(live_status.timestamp).toLocaleTimeString()}
                             </p>

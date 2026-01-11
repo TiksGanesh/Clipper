@@ -118,11 +118,11 @@ const currentActivity = await supabase
 const { data, error } = useSWR<TrackingData>(
   `/api/track?booking_id=${params.id}`,
   fetcher,
-  { refreshInterval: 30000 } // 30 seconds
+  { refreshInterval: 10000 } // 10 seconds
 );
 ```
 
-- Auto-refreshes every 30 seconds
+- Auto-refreshes every 10 seconds
 - Handles loading, error, and success states
 - Deduplicates requests automatically
 
@@ -305,7 +305,7 @@ barbers: {
 
 **Key Features Delivered**:
 ✅ Public tracking API with queue logic  
-✅ Real-time polling every 30 seconds  
+✅ Real-time polling every 10 seconds  
 ✅ Pulsing live status indicator  
 ✅ Smart status messages ("You're Next!", "Service in Progress")  
 ✅ Delay visualization with strike-through  

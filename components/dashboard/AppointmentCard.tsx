@@ -1,6 +1,6 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useTransition, useState } from 'react'
 import {
     seatCustomerAction,
     markBookingCompletedAction,
@@ -67,44 +67,53 @@ export default function AppointmentCard({
     isWalkIn = false,
 }: Props) {
     const [isPending, startTransition] = useTransition()
+    const [errorMessage, setErrorMessage] = useState<string | null>(null)
     const config = STATUS_CONFIG[status]
 
     const handleSeatCustomer = () => {
+        setErrorMessage(null)
         startTransition(async () => {
             try {
                 await seatCustomerAction({ bookingId })
             } catch (error) {
                 console.error('Failed to seat customer:', error)
+                setErrorMessage('Failed to seat customer. Please try again.')
             }
         })
     }
 
     const handleMarkCompleted = () => {
+        setErrorMessage(null)
         startTransition(async () => {
             try {
                 await markBookingCompletedAction({ bookingId })
             } catch (error) {
                 console.error('Failed to complete booking:', error)
+                setErrorMessage('Failed to complete booking. Please try again.')
             }
         })
     }
 
     const handleMarkNoShow = () => {
+        setErrorMessage(null)
         startTransition(async () => {
             try {
                 await markBookingNoShowAction({ bookingId })
             } catch (error) {
                 console.error('Failed to mark as no-show:', error)
+                setErrorMessage('Failed to mark as no-show. Please try again.')
             }
         })
     }
 
     const handleCancel = () => {
+        setErrorMessage(null)
         startTransition(async () => {
             try {
                 await cancelBookingAction({ bookingId })
             } catch (error) {
                 console.error('Failed to cancel booking:', error)
+                setErrorMessage('Failed to cancel booking. Please try again.')
             }
         })
     }
@@ -113,6 +122,13 @@ export default function AppointmentCard({
         <div
             className={`rounded-lg border p-3 sm:p-4 transition-all ${config.bgColor} ${config.borderColor}`}
         >
+            {/* Error message */}
+            {errorMessage && (
+                <div className="mb-3 p-2 bg-red-100 border border-red-300 rounded text-red-800 text-xs sm:text-sm">
+                    {errorMessage}
+                </div>
+            )}
+            
             {/* Header with status badge and icons */}
             <div className="flex items-start justify-between gap-2 mb-2 sm:mb-3">
                 <div className="flex-1 min-w-0">

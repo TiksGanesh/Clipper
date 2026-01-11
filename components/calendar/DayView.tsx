@@ -308,7 +308,7 @@ export default function DayView({ barbers, initialDate, initialBarberId, isReadO
         setSelectedBooking(null)
 
         const actionMap = {
-            seated: () => import('@/app/barber/calendar/actions').then(m => m.seatCustomerAction({ bookingId })),
+            seated: () => seatCustomerAction({ bookingId }),
             completed: () => markBookingCompletedAction({ bookingId }),
             no_show: () => markBookingNoShowAction({ bookingId }),
             canceled: () => cancelBookingAction({ bookingId }),

@@ -25,7 +25,7 @@ The "Track Booking Status" button and Booking ID are now fully functional on the
 - ✅ Real-time queue position
 - ✅ Expected start time with delays
 - ✅ Current shop activity
-- ✅ Auto-refresh every 30 seconds
+- ✅ Auto-refresh every 10 seconds
 - ✅ Pulsing green "Live Status" indicator
 - ✅ Mobile responsive design
 - ✅ Framer Motion animations
@@ -102,7 +102,7 @@ User sees confirmation with ID and track button
 - [x] Tracking API returns queue position
 - [x] Tracking API returns current activity
 - [x] Cache headers set to no-cache
-- [x] SWR polling configured (30 seconds)
+- [x] SWR polling configured (10 seconds)
 
 ### UX/UI
 - [x] Green button for "Track" action
@@ -124,7 +124,7 @@ To verify everything works:
 - [ ] Verify tracking page loads at `/track/[booking-id]`
 - [ ] Verify live queue position shows
 - [ ] Verify "Live Status" pulsing indicator works
-- [ ] Wait 30 seconds and see data refresh
+- [ ] Wait 10 seconds and see data refresh
 - [ ] Test on mobile device
 - [ ] Test payment failure (tracking button should not show)
 - [ ] Test walk-in booking (tracking button should show)
@@ -199,7 +199,7 @@ For issues or questions:
    - Check network tab for API errors
 
 3. **Queue Position Not Updating**
-   - Check SWR polling (should refresh every 30 seconds)
+   - Check SWR polling (should refresh every 10 seconds)
    - Check that other bookings exist for the barber
    - Verify browser isn't blocking requests
 
@@ -214,6 +214,6 @@ Customers can:
 2. ✅ Click to track their booking in real-time
 3. ✅ See queue position and expected start time
 4. ✅ View current shop activity
-5. ✅ Get live updates every 30 seconds
+5. ✅ Get live updates every 10 seconds
 
 All pieces are working together seamlessly!
