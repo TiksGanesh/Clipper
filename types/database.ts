@@ -116,6 +116,7 @@ export type Database = {
                     name: string
                     phone: string | null
                     is_active: boolean
+                    current_delay_minutes: number
                     deleted_at: string | null
                     created_at: string
                     updated_at: string
@@ -126,6 +127,7 @@ export type Database = {
                     name: string
                     phone?: string | null
                     is_active?: boolean
+                    current_delay_minutes?: number
                     deleted_at?: string | null
                     created_at?: string
                     updated_at?: string
@@ -136,6 +138,7 @@ export type Database = {
                     name?: string
                     phone?: string | null
                     is_active?: boolean
+                    current_delay_minutes?: number
                     deleted_at?: string | null
                     created_at?: string
                     updated_at?: string
@@ -208,7 +211,7 @@ export type Database = {
                     customer_phone: string
                     start_time: string
                     end_time: string
-                    status: 'confirmed' | 'completed' | 'canceled' | 'no_show'
+                    status: 'confirmed' | 'seated' | 'completed' | 'canceled' | 'no_show'
                     is_walk_in: boolean
                     notes: string | null
                     deleted_at: string | null
@@ -224,7 +227,7 @@ export type Database = {
                     customer_phone: string
                     start_time: string
                     end_time: string
-                    status?: 'confirmed' | 'completed' | 'canceled' | 'no_show'
+                    status?: 'confirmed' | 'seated' | 'completed' | 'canceled' | 'no_show'
                     is_walk_in?: boolean
                     notes?: string | null
                     deleted_at?: string | null
@@ -240,7 +243,7 @@ export type Database = {
                     customer_phone?: string
                     start_time?: string
                     end_time?: string
-                    status?: 'confirmed' | 'completed' | 'canceled' | 'no_show'
+                    status?: 'confirmed' | 'seated' | 'completed' | 'canceled' | 'no_show'
                     is_walk_in?: boolean
                     notes?: string | null
                     deleted_at?: string | null
@@ -407,7 +410,7 @@ export type Database = {
                     customer_phone: string
                     start_time: string
                     end_time: string
-                    status: 'confirmed' | 'completed' | 'canceled' | 'no_show'
+                    status: 'confirmed' | 'seated' | 'completed' | 'canceled' | 'no_show'
                     is_walk_in: boolean
                     notes: string | null
                     created_at: string
@@ -418,7 +421,7 @@ export type Database = {
         Functions: {}
         Enums: {
             subscription_status: 'trial' | 'active' | 'past_due' | 'canceled' | 'expired'
-            booking_status: 'confirmed' | 'completed' | 'canceled' | 'no_show'
+            booking_status: 'confirmed' | 'seated' | 'completed' | 'canceled' | 'no_show'
             payment_status: 'created' | 'paid' | 'failed'
         }
     }

@@ -6,7 +6,7 @@ import type { Database } from '@/types/database'
 import { checkSubscriptionAccess } from '@/lib/subscription-access'
 
 type BookingStatus = Database['public']['Enums']['booking_status']
-const TARGETS: BookingStatus[] = ['completed', 'no_show', 'canceled']
+const TARGETS: BookingStatus[] = ['seated', 'completed', 'no_show', 'canceled']
 
 function assertValidTarget(status: BookingStatus) {
     if (!TARGETS.includes(status)) {
@@ -22,7 +22,12 @@ function ensureTransitionAllowed(current: BookingStatus, next: BookingStatus) {
     if (current === 'canceled') {
         throw new Error('Canceled bookings cannot be changed')
     }
-    // Allow transitions from confirmed/no_show to completed/no_show/canceled
+    if (current === 'no_show') {
+        throw new Error('No-show bookings cannot be changed')
+    }
+    // Allow transitions:
+    // confirmed -> seated, completed, no_show, canceled
+    // seated -> completed, canceled
     return
 }
 
@@ -71,7 +76,16 @@ async function updateStatus({ bookingId, status }: { bookingId: string; status: 
         throw new Error(updateError.message)
     }
 
+    // Revalidate the dashboard to reflect status changes
+    const { revalidatePath } = await import('next/cache')
+    revalidatePath('/dashboard')
+    revalidatePath('/barber/calendar')
+
     return { ok: true }
+}
+
+export async function seatCustomerAction(input: { bookingId: string }) {
+    return updateStatus({ bookingId: input.bookingId, status: 'seated' })
 }
 
 export async function markBookingCompletedAction(input: { bookingId: string }) {

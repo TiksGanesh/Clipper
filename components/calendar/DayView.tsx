@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
+    seatCustomerAction,
     cancelBookingAction,
     markBookingCompletedAction,
     markBookingNoShowAction,
@@ -16,7 +17,7 @@ type BarberOption = {
     name: string
 }
 
-type BookingStatus = 'confirmed' | 'completed' | 'canceled' | 'no_show'
+type BookingStatus = 'confirmed' | 'seated' | 'completed' | 'canceled' | 'no_show'
 
 type DayBooking = {
     id: string
@@ -55,7 +56,7 @@ type ViewMode = 'day' | 'week'
 
 const SLOT_MINUTES = 15
 
-type BookingDisplayStatus = 'upcoming' | 'completed' | 'no_show' | 'canceled'
+type BookingDisplayStatus = 'upcoming' | 'seated' | 'completed' | 'no_show' | 'canceled'
 
 function timeToMinutes(time: string | null) {
     if (!time) return null
@@ -136,6 +137,8 @@ function formatRange(range: { start: string; end: string }) {
 
 function toDisplayStatus(status: BookingStatus): BookingDisplayStatus {
     switch (status) {
+        case 'seated':
+            return 'seated'
         case 'completed':
             return 'completed'
         case 'no_show':
@@ -150,7 +153,8 @@ function toDisplayStatus(status: BookingStatus): BookingDisplayStatus {
 function bookingStyle(status: BookingDisplayStatus, isBlock?: boolean) {
     const map: Record<BookingDisplayStatus, { bg: string; border: string; text: string; label: string }> = {
         upcoming: { bg: '#e0f2fe', border: '#60a5fa', text: '#0f172a', label: 'Upcoming' },
-        completed: { bg: '#dcfce7', border: '#22c55e', text: '#14532d', label: 'Completed' },
+        seated: { bg: '#dcfce7', border: '#22c55e', text: '#14532d', label: 'In Chair' },
+        completed: { bg: '#f3f4f6', border: '#d1d5db', text: '#374151', label: 'Completed' },
         no_show: { bg: '#fef9c3', border: '#facc15', text: '#854d0e', label: 'No Show' },
         canceled: { bg: '#fee2e2', border: '#f87171', text: '#7f1d1d', label: 'Cancelled' },
     }
@@ -278,7 +282,19 @@ export default function DayView({ barbers, initialDate, initialBarberId, isReadO
             }
         }
 
-        return result
+        // Sort bookings: seated first, then confirmed by time, then completed, no_show, canceled
+        const bookings = result.filter((r) => r.kind === 'booking')
+        const available = result.filter((r) => r.kind === 'available')
+
+        const statusOrder = { seated: 0, upcoming: 1, no_show: 2, completed: 3, canceled: 4 }
+        const sortedBookings = bookings.sort((a, b) => {
+            const statusCmp = (statusOrder[a.displayStatus] ?? 5) - (statusOrder[b.displayStatus] ?? 5)
+            if (statusCmp !== 0) return statusCmp
+            // Within same status, sort by start time
+            return new Date(a.start).getTime() - new Date(b.start).getTime()
+        })
+
+        return [...sortedBookings, ...available]
     }, [slots])
 
     const selectedSlotLabel = useMemo(() => {
@@ -286,20 +302,27 @@ export default function DayView({ barbers, initialDate, initialBarberId, isReadO
         return slot ? formatRange(slot) : ''
     }, [selectedSlot, slots])
 
-    const handleBookingAction = (bookingId: string, status: BookingDisplayStatus) => {
+    const handleBookingAction = (bookingId: string, status: BookingDisplayStatus | 'seated') => {
         setActionMessage('')
         setActionError('')
         setSelectedBooking(null)
 
-        const action = status === 'completed'
-            ? markBookingCompletedAction
-            : status === 'no_show'
-                ? markBookingNoShowAction
-                : cancelBookingAction
+        const actionMap = {
+            seated: () => seatCustomerAction({ bookingId }),
+            completed: () => markBookingCompletedAction({ bookingId }),
+            no_show: () => markBookingNoShowAction({ bookingId }),
+            canceled: () => cancelBookingAction({ bookingId }),
+            upcoming: () => Promise.reject(new Error('Invalid action')),
+        }
+
+        const action = actionMap[status]
+        if (!action) {
+            throw new Error('Unsupported status action')
+        }
 
         startActionTransition(async () => {
             try {
-                await action({ bookingId })
+                await action()
                 setActionMessage('Booking updated')
                 setSelectedSlot('')
                 const params = new URLSearchParams({ barber_id: selectedBarberId, date: selectedDate })
@@ -547,8 +570,8 @@ export default function DayView({ barbers, initialDate, initialBarberId, isReadO
                                                             <p className="text-base font-semibold text-gray-900">
                                                                 {formatTimeLabel(row.start)}
                                                             </p>
-                                                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${row.booking.is_block ? 'bg-gray-200 text-gray-700' : row.displayStatus === 'upcoming' ? 'bg-blue-100 text-blue-800' : row.displayStatus === 'completed' ? 'bg-emerald-100 text-emerald-800' : row.displayStatus === 'no_show' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}`}>
-                                                                {row.booking.is_block ? 'Break' : row.displayStatus === 'upcoming' ? 'Upcoming' : row.displayStatus === 'completed' ? 'Done' : row.displayStatus === 'no_show' ? 'No Show' : 'Cancelled'}
+                                                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${row.booking.is_block ? 'bg-gray-200 text-gray-700' : row.displayStatus === 'upcoming' ? 'bg-blue-100 text-blue-800' : row.displayStatus === 'seated' ? 'bg-green-100 text-green-800' : row.displayStatus === 'completed' ? 'bg-gray-100 text-gray-800' : row.displayStatus === 'no_show' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}`}>
+                                                                {row.booking.is_block ? 'Break' : row.displayStatus === 'upcoming' ? 'Upcoming' : row.displayStatus === 'seated' ? 'In Chair' : row.displayStatus === 'completed' ? 'Done' : row.displayStatus === 'no_show' ? 'No Show' : 'Cancelled'}
                                                             </span>
                                                         </div>
                                                         {!row.booking.is_block && (
@@ -740,6 +763,7 @@ export default function DayView({ barbers, initialDate, initialBarberId, isReadO
                     })}
                     duration={Math.round((new Date(selectedBooking.end_time).getTime() - new Date(selectedBooking.start_time).getTime()) / 60000)}
                     isWalkIn={selectedBooking.is_walk_in}
+                    onSeatCustomer={() => handleBookingAction(selectedBooking.id, 'seated')}
                     onMarkCompleted={() => handleBookingAction(selectedBooking.id, 'completed')}
                     onMarkNoShow={() => handleBookingAction(selectedBooking.id, 'no_show')}
                     onCancel={() => handleBookingAction(selectedBooking.id, 'canceled')}
