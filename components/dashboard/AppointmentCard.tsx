@@ -8,7 +8,7 @@ import {
     cancelBookingAction,
 } from '@/app/barber/calendar/actions'
 
-type AppointmentStatus = 'confirmed' | 'seated' | 'completed' | 'canceled' | 'no_show'
+type AppointmentStatus = 'confirmed' | 'seated' | 'completed' | 'canceled' | 'no_show' | 'pending_payment'
 
 type Props = {
     bookingId: string
@@ -23,6 +23,12 @@ type Props = {
 }
 
 const STATUS_CONFIG = {
+    pending_payment: {
+        label: 'Payment Pending',
+        bgColor: 'bg-yellow-50',
+        borderColor: 'border-yellow-400 border-2',
+        badgeColor: 'bg-yellow-100 text-yellow-800',
+    },
     confirmed: {
         label: 'Waiting',
         bgColor: 'bg-blue-50',
@@ -118,6 +124,35 @@ export default function AppointmentCard({
         })
     }
 
+    const handleRecheckPaymentStatus = () => {
+        setErrorMessage(null)
+        startTransition(async () => {
+            try {
+                const res = await fetch('/api/bookings/check-payment-status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ booking_id: bookingId }),
+                })
+
+                if (!res.ok) {
+                    const error = await res.json().catch(() => ({}))
+                    throw new Error(error.error || 'Failed to check payment status')
+                }
+
+                const data = await res.json()
+                if (data.status === 'paid' || data.status === 'confirmed') {
+                    // Payment was confirmed, page will refresh via server update
+                    setErrorMessage('✓ Payment confirmed! Refreshing...')
+                } else {
+                    setErrorMessage('Payment still pending. Please wait or contact support.')
+                }
+            } catch (error) {
+                console.error('Failed to check payment status:', error)
+                setErrorMessage(error instanceof Error ? error.message : 'Failed to check payment status.')
+            }
+        })
+    }
+
     return (
         <div
             className={`rounded-lg border p-3 sm:p-4 transition-all ${config.bgColor} ${config.borderColor}`}
@@ -164,6 +199,25 @@ export default function AppointmentCard({
 
             {/* Status Action Bar - Mobile optimized */}
             <div className="border-t border-gray-200 pt-2 sm:pt-3 mt-2 sm:mt-3">
+                {status === 'pending_payment' && (
+                    <div className="flex flex-col gap-2 sm:flex-row sm:gap-2">
+                        <button
+                            onClick={handleRecheckPaymentStatus}
+                            disabled={isPending}
+                            className="flex-1 px-3 py-2 text-xs sm:text-sm bg-amber-600 text-white font-medium rounded-md hover:bg-amber-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                        >
+                            🔄 Re-check
+                        </button>
+                        <button
+                            onClick={handleCancel}
+                            disabled={isPending}
+                            className="flex-1 px-3 py-2 text-xs sm:text-sm bg-red-500 text-white font-medium rounded-md hover:bg-red-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                        >
+                            ❌ Clear Hold
+                        </button>
+                    </div>
+                )}
+
                 {status === 'confirmed' && (
                     <div className="flex flex-col gap-2 sm:flex-row sm:gap-2">
                         <button

@@ -177,9 +177,87 @@ export async function GET(request: NextRequest) {
             )
         }
 
+        const bookingStartTime = new Date(bookingData.start_time)
+
+        // DATE VALIDATION LOGIC: Check if booking is expired
+        // Rule: If booking date is in the past (strictly before 'Today'), link is expired
+        // Use IST (Asia/Kolkata) timezone for comparison
+        const now = new Date()
+        const nowIST = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }))
+        const bookingDateIST = new Date(bookingStartTime.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }))
+        
+        // Get start of today in IST
+        const todayIST = new Date(bookingDateIST)
+        todayIST.setHours(0, 0, 0, 0)
+        
+        // Get start of current day in IST
+        const currentDayIST = new Date(nowIST)
+        currentDayIST.setHours(0, 0, 0, 0)
+
+        // If booking date is before today (in IST), it's expired
+        if (bookingDateIST < currentDayIST) {
+            return NextResponse.json(
+                {
+                    status: 'expired',
+                    message: 'This tracking link has expired.',
+                    booking: {
+                        date: bookingStartTime.toLocaleDateString('en-IN', { 
+                            timeZone: 'Asia/Kolkata',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                        }),
+                        service_name: service.name
+                    }
+                },
+                { status: 200 }
+            )
+        }
+
+        // COMPLETED STATUS: Return immediately without queue calculation
+        if (bookingData.status === 'completed') {
+            const formatTime = (date: Date) => {
+                return date.toLocaleTimeString('en-IN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true,
+                    timeZone: 'Asia/Kolkata'
+                })
+            }
+
+            return NextResponse.json(
+                {
+                    booking: {
+                        id: bookingData.id,
+                        original_start: formatTime(bookingStartTime),
+                        service_name: service.name,
+                        barber_name: barber.name,
+                        customer_name: bookingData.customer_name,
+                        status: bookingData.status,
+                        duration_minutes: service.duration_minutes,
+                    },
+                    live_status: {
+                        is_delayed: false,
+                        delay_minutes: 0,
+                        expected_start: formatTime(bookingStartTime),
+                        queue_position: 0,
+                        people_ahead: 0,
+                        current_activity: 'Completed',
+                        timestamp: new Date().toISOString(),
+                    }
+                },
+                {
+                    headers: {
+                        'Cache-Control': 'no-store, no-cache, max-age=0, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    }
+                }
+            )
+        }
+
         const barberId = bookingData.barber_id
         const barberDelayMinutes = barber.current_delay_minutes || 0
-        const bookingStartTime = new Date(bookingData.start_time)
         const todayStart = new Date(bookingStartTime)
         todayStart.setHours(0, 0, 0, 0)
         const todayEnd = new Date(bookingStartTime)
