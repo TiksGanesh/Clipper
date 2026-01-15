@@ -1,6 +1,6 @@
 'use client'
 
-type AppointmentStatus = 'confirmed' | 'seated' | 'completed' | 'no_show' | 'canceled'
+type AppointmentStatus = 'confirmed' | 'seated' | 'completed' | 'no_show' | 'canceled' | 'pending_payment'
 
 type Props = {
     isOpen: boolean
@@ -28,6 +28,7 @@ const STATUS_CONFIG = {
     completed: { label: 'Completed', bgColor: 'bg-gray-100', textColor: 'text-gray-800' },
     no_show: { label: 'No-show', bgColor: 'bg-orange-100', textColor: 'text-orange-800' },
     canceled: { label: 'Cancelled', bgColor: 'bg-red-100', textColor: 'text-red-800' },
+    pending_payment: { label: 'Payment Pending', bgColor: 'bg-yellow-100', textColor: 'text-yellow-800' },
 }
 
 export default function AppointmentDetailSheet({

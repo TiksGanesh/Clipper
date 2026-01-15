@@ -197,7 +197,28 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                 totalPrice,
             })
 
-            // Step 1: Create a soft lock (pending_payment booking)
+            // Step 1: Create payment order FIRST
+            console.log('[booking-form] creating payment order...')
+            const orderRes = await fetch("/api/payments", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    amount: totalPrice, 
+                    userId: cleanPhone,
+                    serviceIds: serviceIds
+                }),
+            })
+
+            if (!orderRes.ok) {
+                const errorData = await orderRes.json()
+                console.error('[booking-form] payment order creation failed', errorData)
+                setSubmitting(false)
+                throw new Error(errorData.error || "Failed to initiate payment")
+            }
+            const order = await orderRes.json()
+            console.log('[booking-form] payment order created', { orderId: order.id, amount: order.amount })
+
+            // Step 2: Create a soft lock with the order_id (pending_payment booking)
             console.log('[booking-form] requesting hold on slot...')
             const holdRes = await fetch('/api/bookings/hold', {
                 method: 'POST',
@@ -208,6 +229,8 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                     date: date,
                     slot_time: selectedSlot,
                     timezone_offset: timezoneOffset,
+                    razorpay_order_id: order.id,
+                    amount: totalPrice
                 }),
             })
 
@@ -231,25 +254,7 @@ export default function BookingForm({ shop, barbers, services }: Props) {
             console.log('[booking-form] slot hold successful', { bookingId })
             setHoldBookingId(bookingId)
 
-            // Step 2: Proceed with payment (if advance payment required)
-            const orderRes = await fetch("/api/payments", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ 
-                    amount: totalPrice, 
-                    userId: cleanPhone,
-                    serviceIds: serviceIds
-                }),
-            })
-
-            if (!orderRes.ok) {
-                const errorData = await orderRes.json()
-                console.error('[booking-form] payment order creation failed', errorData)
-                setSubmitting(false)
-                throw new Error(errorData.error || "Failed to initiate payment")
-            }
-            const order = await orderRes.json()
-
+            // Step 3: Open Razorpay payment UI
             const razorpayKeyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
             if (!razorpayKeyId) {
                 setSubmitting(false)
@@ -329,6 +334,8 @@ export default function BookingForm({ shop, barbers, services }: Props) {
     const confirmBookingFromHold = async (paymentId: string, orderId: string, finalPhone: string, bookingId: string) => {
         try {
             // Confirm the pending booking with customer details
+            // NOTE: The API will look up the actual booking_id using razorpay_order_id (trusted source from gateway)
+            // so the booking_id sent here is informational only. This prevents multi-tab collisions.
             const res = await fetch('/api/bookings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

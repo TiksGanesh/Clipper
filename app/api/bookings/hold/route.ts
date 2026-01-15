@@ -15,7 +15,9 @@ const holdSchema = z.object({
     service_ids: z.array(z.string().uuid('Invalid service ID')).min(1).max(20),
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD format'),
     slot_time: z.string().datetime('Invalid slot time'),
-    timezone_offset: z.number().int().min(-720).max(720).optional()
+    timezone_offset: z.number().int().min(-720).max(720).optional(),
+    razorpay_order_id: z.string().optional(),
+    amount: z.number().positive().max(1000000).optional()
 })
 
 const HOLD_DURATION_MINUTES = 10
@@ -49,14 +51,16 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
     }
 
-    const { barber_id, service_ids, date, slot_time, timezone_offset } = body
+    const { barber_id, service_ids, date, slot_time, timezone_offset, razorpay_order_id, amount } = body
 
     console.log('[bookings-hold] incoming hold request', {
         barber_id,
         service_ids,
         date,
         slot_time,
-        tz_offset: timezone_offset
+        tz_offset: timezone_offset,
+        razorpay_order_id,
+        amount
     })
 
     // Fetch and validate services
@@ -326,6 +330,38 @@ export async function POST(req: Request) {
         expiresAt: expiresAt.toISOString(),
         createdAt: new Date().toISOString()
     })
+
+    // Create payment record if razorpay_order_id and amount are provided
+    if (razorpay_order_id && amount !== undefined) {
+        console.log('[bookings-hold] creating payment record', {
+            bookingId: (holdBooking as any).id,
+            razorpay_order_id,
+            amount
+        })
+
+        const { error: paymentError } = await (supabase as any)
+            .from('payments')
+            .insert({
+                booking_id: (holdBooking as any).id,
+                razorpay_order_id: razorpay_order_id,
+                amount: amount,
+                status: 'created'
+            })
+
+        if (paymentError) {
+            console.error('[bookings-hold] failed to create payment record', {
+                bookingId: (holdBooking as any).id,
+                razorpay_order_id,
+                error: paymentError
+            })
+            // Non-fatal: booking hold is created, payment record can be created later
+        } else {
+            console.log('[bookings-hold] payment record created successfully', {
+                bookingId: (holdBooking as any).id,
+                razorpay_order_id
+            })
+        }
+    }
 
     const response = NextResponse.json({
         bookingId: (holdBooking as any).id,

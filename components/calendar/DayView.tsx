@@ -17,7 +17,7 @@ type BarberOption = {
     name: string
 }
 
-type BookingStatus = 'confirmed' | 'seated' | 'completed' | 'canceled' | 'no_show'
+type BookingStatus = 'confirmed' | 'seated' | 'completed' | 'canceled' | 'no_show' | 'pending_payment'
 
 type DayBooking = {
     id: string
@@ -56,7 +56,7 @@ type ViewMode = 'day' | 'week'
 
 const SLOT_MINUTES = 15
 
-type BookingDisplayStatus = 'upcoming' | 'seated' | 'completed' | 'no_show' | 'canceled'
+type BookingDisplayStatus = 'pending_payment' | 'upcoming' | 'seated' | 'completed' | 'no_show' | 'canceled'
 
 function timeToMinutes(time: string | null) {
     if (!time) return null
@@ -137,6 +137,8 @@ function formatRange(range: { start: string; end: string }) {
 
 function toDisplayStatus(status: BookingStatus): BookingDisplayStatus {
     switch (status) {
+        case 'pending_payment':
+            return 'pending_payment'
         case 'seated':
             return 'seated'
         case 'completed':
@@ -152,6 +154,7 @@ function toDisplayStatus(status: BookingStatus): BookingDisplayStatus {
 
 function bookingStyle(status: BookingDisplayStatus, isBlock?: boolean) {
     const map: Record<BookingDisplayStatus, { bg: string; border: string; text: string; label: string }> = {
+        pending_payment: { bg: '#fef3c7', border: '#f59e0b', text: '#92400e', label: 'Payment Pending' },
         upcoming: { bg: '#e0f2fe', border: '#60a5fa', text: '#0f172a', label: 'Upcoming' },
         seated: { bg: '#dcfce7', border: '#22c55e', text: '#14532d', label: 'In Chair' },
         completed: { bg: '#f3f4f6', border: '#d1d5db', text: '#374151', label: 'Completed' },
@@ -282,13 +285,13 @@ export default function DayView({ barbers, initialDate, initialBarberId, isReadO
             }
         }
 
-        // Sort bookings: seated first, then confirmed by time, then completed, no_show, canceled
+        // Sort bookings: pending_payment first (CRITICAL - must be visible), seated next, then confirmed by time, then completed, no_show, canceled
         const bookings = result.filter((r) => r.kind === 'booking')
         const available = result.filter((r) => r.kind === 'available')
 
-        const statusOrder = { seated: 0, upcoming: 1, no_show: 2, completed: 3, canceled: 4 }
+        const statusOrder = { pending_payment: 0, seated: 1, upcoming: 2, no_show: 3, completed: 4, canceled: 5 }
         const sortedBookings = bookings.sort((a, b) => {
-            const statusCmp = (statusOrder[a.displayStatus] ?? 5) - (statusOrder[b.displayStatus] ?? 5)
+            const statusCmp = (statusOrder[a.displayStatus] ?? 6) - (statusOrder[b.displayStatus] ?? 6)
             if (statusCmp !== 0) return statusCmp
             // Within same status, sort by start time
             return new Date(a.start).getTime() - new Date(b.start).getTime()
@@ -313,6 +316,7 @@ export default function DayView({ barbers, initialDate, initialBarberId, isReadO
             no_show: () => markBookingNoShowAction({ bookingId }),
             canceled: () => cancelBookingAction({ bookingId }),
             upcoming: () => Promise.reject(new Error('Invalid action')),
+            pending_payment: () => Promise.reject(new Error('Use Re-check or Clear Hold in the booking card')),
         }
 
         const action = actionMap[status]

@@ -1,6 +1,23 @@
-# Appointment Status Lifecycle - Documentation Index
+# Documentation Index
 
-## Quick Navigation
+## 🔒 CRITICAL: Database Security (RLS)
+
+**Status**: ✅ Ready for Deployment
+
+### Start Here (RLS Security)
+- **[RLS_IMPLEMENTATION_SUMMARY.md](./docs/supabase/RLS_IMPLEMENTATION_SUMMARY.md)** - Complete overview (5 min read)
+- **[SUPABASE_RLS_GUIDE.md](./docs/supabase/SUPABASE_RLS_GUIDE.md)** - Comprehensive guide (20 min read)
+
+### Deployment & Operations
+- **[RLS_DEPLOYMENT_CHECKLIST.md](./docs/supabase/RLS_DEPLOYMENT_CHECKLIST.md)** - Step-by-step deployment guide
+- **[RLS_SQL_QUICK_REFERENCE.md](./docs/supabase/RLS_SQL_QUICK_REFERENCE.md)** - SQL commands & quick lookup
+
+### Migration File
+- **[supabase/migrations/0013_enable_rls_on_critical_tables.sql](./supabase/migrations/0013_enable_rls_on_critical_tables.sql)** - Execute this in Supabase SQL Editor
+
+---
+
+## 📋 Appointment Status Lifecycle - Documentation Index
 
 ### 📖 Start Here
 - **[IMPLEMENTATION_COMPLETE.md](./IMPLEMENTATION_COMPLETE.md)** - Full implementation report
