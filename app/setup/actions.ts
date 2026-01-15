@@ -33,9 +33,41 @@ export async function createShopAction(formData: FormData) {
     const name = (formData.get('name') as string)?.trim()
     const phone = (formData.get('phone') as string)?.trim()
     const address = (formData.get('address') as string)?.trim() || null
+    const slug = (formData.get('slug') as string)?.trim().toLowerCase()
+    const brandColor = (formData.get('brand_color') as string)?.trim() || '#4F46E5'
+    const tagline = (formData.get('tagline') as string)?.trim() || null
 
-    if (!name || !phone) {
-        redirect('/setup/shop?error=' + encodeURIComponent('Shop name and phone are required'))
+    if (!name || !phone || !slug) {
+        redirect('/setup/shop?error=' + encodeURIComponent('Shop name, phone, and URL slug are required'))
+    }
+
+    // Validate slug format
+    if (!/^[a-z0-9-]+$/.test(slug)) {
+        redirect('/setup/shop?error=' + encodeURIComponent('Shop URL must contain only lowercase letters, numbers, and hyphens'))
+    }
+
+    if (slug.length < 2 || slug.length > 50) {
+        redirect('/setup/shop?error=' + encodeURIComponent('Shop URL must be 2-50 characters long'))
+    }
+
+    // Check if slug already exists
+    const { data: existingSlug, error: slugCheckError } = await supabase
+        .from('shops')
+        .select('id')
+        .eq('slug', slug)
+        .is('deleted_at', null)
+        .maybeSingle()
+
+    if (existingSlug) {
+        redirect('/setup/shop?error=' + encodeURIComponent('This Shop URL is already taken. Please choose another.'))
+    }
+
+    if (slugCheckError && slugCheckError.code !== 'PGRST116') {
+        // PGRST116 = "no rows returned from a statement that expected one row"
+        const errorMsg = process.env.NODE_ENV === 'development'
+            ? `Slug check error: ${slugCheckError.message}`
+            : 'Unable to verify shop URL. Please try again.'
+        redirect('/setup/shop?error=' + encodeURIComponent(errorMsg))
     }
 
     // Try to update existing shop first
@@ -46,17 +78,21 @@ export async function createShopAction(formData: FormData) {
             name,
             phone,
             address,
+            slug,
+            brand_color: brandColor,
+            tagline,
             deleted_at: null,
         })
         .eq('owner_id', user.id)
-        .select()
+        .select('id, slug')
 
     // If update succeeded (found and updated a row), we're done
     if (!updateError && updated && updated.length > 0) {
         // Create trial subscription for updated shop
-        const shopId = (updated[0] as { id: string }).id
+        const shopId = (updated[0] as { id: string; slug: string }).id
         await createTrialSubscription(shopId)
-        redirect('/setup/barbers')
+        const updatedSlug = (updated[0] as { id: string; slug: string }).slug
+        redirect(`/setup/barbers?shop_slug=${encodeURIComponent(updatedSlug)}`)
     }
 
     // If update didn't find any rows (not an error, just nothing to update), try insert
@@ -67,27 +103,37 @@ export async function createShopAction(formData: FormData) {
             name,
             phone,
             address,
-        }).select('id').single()
+            slug,
+            brand_color: brandColor,
+            tagline,
+        }).select('id, slug').single()
 
         if (insertError) {
-            // If insert fails due to duplicate, that's OK - means another request created it
+            // Handle slug conflict
+            if (insertError.code === '23505' && insertError.message.includes('slug')) {
+                redirect('/setup/shop?error=' + encodeURIComponent('This Shop URL is already taken. Please choose another.'))
+            }
+
+            // If insert fails due to unique owner constraint, that's OK
             if (insertError.code === '23505') {
                 redirect('/setup/barbers')
             }
+
             // Show actual error in development for debugging
-            const errorMsg = process.env.NODE_ENV === 'development' 
+            const errorMsg = process.env.NODE_ENV === 'development'
                 ? `Database error: ${insertError.message} (Code: ${insertError.code})`
                 : 'Unable to create shop. Please try again.'
             redirect('/setup/shop?error=' + encodeURIComponent(errorMsg))
         }
 
         // Create trial subscription for new shop
-        const shopId = (inserted as { id: string } | null)?.id
+        const shopId = (inserted as { id: string; slug: string } | null)?.id
+        const insertedSlug = (inserted as { id: string; slug: string } | null)?.slug
         if (shopId) {
             await createTrialSubscription(shopId)
         }
 
-        redirect('/setup/barbers')
+        redirect(`/setup/barbers?shop_slug=${encodeURIComponent(insertedSlug || 'shop')}`)
     }
 
     // If there was an actual update error

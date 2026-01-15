@@ -43,6 +43,11 @@ export type Database = {
                     name: string
                     phone: string
                     address: string | null
+                    slug: string
+                    logo_url: string | null
+                    brand_color: string
+                    tagline: string | null
+                    splash_image_url: string | null
                     deleted_at: string | null
                     created_at: string
                     updated_at: string
@@ -53,6 +58,11 @@ export type Database = {
                     name: string
                     phone: string
                     address?: string | null
+                    slug?: string
+                    logo_url?: string | null
+                    brand_color?: string
+                    tagline?: string | null
+                    splash_image_url?: string | null
                     deleted_at?: string | null
                     created_at?: string
                     updated_at?: string
@@ -63,6 +73,11 @@ export type Database = {
                     name?: string
                     phone?: string
                     address?: string | null
+                    slug?: string
+                    logo_url?: string | null
+                    brand_color?: string
+                    tagline?: string | null
+                    splash_image_url?: string | null
                     deleted_at?: string | null
                     created_at?: string
                     updated_at?: string
