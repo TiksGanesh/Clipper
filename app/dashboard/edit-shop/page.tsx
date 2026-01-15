@@ -15,10 +15,10 @@ export default async function EditShopPage() {
     // Fetch shop
     const { data: shop } = await supabase
         .from('shops')
-        .select('id, name, phone, address, lunch_start, lunch_end')
+        .select('id, name, phone, address, slug, brand_color, logo_url, tagline, splash_image_url, lunch_start, lunch_end')
         .eq('owner_id', user.id)
         .is('deleted_at', null)
-        .maybeSingle() as { data: { id: string; name: string; phone: string | null; address: string | null; lunch_start: string | null; lunch_end: string | null } | null; error: any }
+        .maybeSingle() as { data: { id: string; name: string; phone: string | null; address: string | null; slug: string; brand_color: string; logo_url: string | null; tagline: string | null; splash_image_url: string | null; lunch_start: string | null; lunch_end: string | null } | null; error: any }
 
     if (!shop) {
         return <SetupPendingMessage userEmail={user.email ?? ''} step="shop" />
