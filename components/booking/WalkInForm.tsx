@@ -149,23 +149,8 @@ export default function WalkInForm({ shopId, barbers, services, shopPhone, shopN
                 throw new Error(body.error || 'Failed to create walk-in')
             }
 
-            // Get selected service and barber details for confirmation page
-            const selectedServiceObj = services.find(s => s.id === serviceId)
-            const selectedBarberObj = barbers.find(b => b.id === barberId)
-
-            // Redirect to confirmation page with walk-in flag
-            const params = new URLSearchParams({
-                booking_id: body.booking_id,
-                is_walk_in: 'true',
-                shop: shopName || 'Shop',
-                barber: selectedBarberObj?.name || 'Barber',
-                services: selectedServiceObj?.name || 'Service',
-                duration: String(selectedServiceObj?.duration_minutes || 0),
-                date: selectedSlot.start,
-                time: selectedSlot.start,
-                customer: customerName.trim() || 'Walk-In',
-            })
-            router.push(`/booking-confirmed?${params.toString()}`)
+            // Redirect to walk-in success page with tracking receipt
+            router.push(`/dashboard/walkin-success/${body.booking_id}`)
 
             if (onSuccess) {
                 onSuccess(body.booking_id)
