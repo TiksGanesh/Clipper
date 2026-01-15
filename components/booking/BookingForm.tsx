@@ -9,6 +9,7 @@ type Shop = {
     name: string
     address: string | null
     phone: string | null
+    slug?: string
 }
 
 type Barber = {
@@ -367,6 +368,8 @@ export default function BookingForm({ shop, barbers, services }: Props) {
             const bookingParams = new URLSearchParams({
                 status: 'success',
                 shop: shop.name,
+                shop_id: shop.id,
+                shop_slug: shop.slug || '',
                 barber: selectedBarber?.name || '',
                 services: selectedServiceName,
                 date: date,
@@ -418,6 +421,8 @@ export default function BookingForm({ shop, barbers, services }: Props) {
             const bookingParams = new URLSearchParams({
                 status: 'success',
                 shop: shop.name,
+                shop_id: shop.id,
+                shop_slug: shop.slug || '',
                 barber: selectedBarber?.name || '',
                 services: selectedServiceName,
                 date: date,

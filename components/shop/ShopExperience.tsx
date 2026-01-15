@@ -55,6 +55,11 @@ export function ShopExperience({ shop }: ShopExperienceProps) {
                         </div>
                     )}
 
+                    {/* Shop Name */}
+                    <h1 className="text-white text-3xl font-bold text-center px-4 animate-fade-in">
+                        {shop.name}
+                    </h1>
+
                     {/* Tagline */}
                     {shop.tagline && (
                         <p className="text-white text-lg font-medium text-center px-4 animate-fade-in">
@@ -115,7 +120,7 @@ export function ShopExperience({ shop }: ShopExperienceProps) {
 
                             {/* Barber Login Button */}
                             <Link
-                                href={`/login?shop_id=${shop.id}`}
+                                href={`/login?shop_id=${shop.id}&shop_slug=${shop.slug}`}
                                 className="block w-full py-3 px-6 rounded-lg font-semibold transition-colors hover:bg-gray-100"
                                 style={{
                                     color: shop.brand_color,
@@ -128,6 +133,13 @@ export function ShopExperience({ shop }: ShopExperienceProps) {
                         </div>
                     </div>
                 </div>
+
+                {/* Footer */}
+                <footer className="border-t border-gray-200 bg-white px-6 py-4 text-center">
+                    <p className="text-sm text-gray-600">
+                        Powered by Clipper ❤️
+                    </p>
+                </footer>
             </div>
         </div>
     );

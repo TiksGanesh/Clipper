@@ -11,6 +11,7 @@ export default function BookingConfirmedContent() {
   // Read all parameters from URL using useSearchParams hook
   const shop = searchParams.get('shop') || 'Shop'
   const shopId = searchParams.get('shop_id') || ''
+  const shopSlug = searchParams.get('shop_slug') || ''
   const barber = searchParams.get('barber') || 'Barber'
   const services = searchParams.get('services') || 'Service'
   const duration = searchParams.get('duration') || '0'
@@ -222,8 +223,10 @@ export default function BookingConfirmedContent() {
               if (isWalkIn) {
                 router.push('/dashboard')
               } else {
-                // Redirect to booking form for new booking or home if no shop_id
-                if (shopId) {
+                // If shop_slug is available, redirect back to shop experience
+                if (shopSlug) {
+                  router.push(`/shop/${shopSlug}`)
+                } else if (shopId) {
                   router.push(`/book/${shopId}`)
                 } else {
                   router.push('/')

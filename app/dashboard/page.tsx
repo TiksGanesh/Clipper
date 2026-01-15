@@ -39,12 +39,13 @@ export default async function DashboardPage() {
     // Enforce first-time setup completion before accessing dashboard
     const { data: shop } = await supabase
         .from('shops')
-        .select('id')
+        .select('id, slug')
         .eq('owner_id', user.id)
         .is('deleted_at', null)
         .maybeSingle()
 
-    const shopId = (shop as { id: string } | null)?.id
+    const shopId = (shop as { id: string; slug: string } | null)?.id
+    const shopSlug = (shop as { id: string; slug: string } | null)?.slug
     if (!shopId) {
         redirect('/setup/shop')
     }
@@ -134,7 +135,7 @@ export default async function DashboardPage() {
                         <div>
                             <span className="text-xl font-black text-gray-900">{todayString}</span>
                         </div>
-                        <form action="/api/auth/signout" method="POST">
+                        <form action={`/api/auth/signout?shop_slug=${shopSlug || ''}`} method="POST">
                             <button
                                 type="submit"
                                 aria-label="Sign Out"
@@ -154,7 +155,7 @@ export default async function DashboardPage() {
                             <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
                             <p className="text-base text-gray-600 mt-1 truncate">Welcome, <span className="font-medium">{user.email}</span></p>
                         </div>
-                        <form action="/api/auth/signout" method="POST">
+                        <form action={`/api/auth/signout?shop_slug=${shopSlug || ''}`} method="POST">
                             <button
                                 type="submit"
                                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition"
@@ -186,6 +187,7 @@ export default async function DashboardPage() {
                             barberCount={(barbers as Barber[])?.length ?? 0}
                             serviceCount={(services as Service[])?.length ?? 0}
                             todayRevenue={dailyRevenue}
+                            shopSlug={shopSlug}
                         />
                     </div>
                 </div>
