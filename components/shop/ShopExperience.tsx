@@ -17,6 +17,10 @@ interface ShopExperienceProps {
  */
 export function ShopExperience({ shop }: ShopExperienceProps) {
     const [showSplash, setShowSplash] = useState(true);
+    const safeSlug = shop.slug ?? '';
+    const canNavigate = Boolean(safeSlug);
+    const bookingHref = canNavigate ? `/shop/${safeSlug}/book` : '#';
+    const trackHref = canNavigate ? `/shop/${safeSlug}/track` : '#';
 
     // Auto-hide splash screen after 1.5 seconds
     useEffect(() => {
@@ -111,16 +115,27 @@ export function ShopExperience({ shop }: ShopExperienceProps) {
                         <div className="space-y-3">
                             {/* Book Appointment Button */}
                             <Link
-                                href={`/shop/${shop.slug}/book`}
-                                className="block w-full py-3 px-6 rounded-lg font-semibold text-white transition-transform hover:scale-105 active:scale-95"
+                                href={bookingHref}
+                                aria-disabled={!canNavigate}
+                                className={`block w-full py-3 px-6 rounded-lg font-semibold text-white transition-transform hover:scale-105 active:scale-95 ${!canNavigate ? 'pointer-events-none opacity-60' : ''}`}
                                 style={{ backgroundColor: shop.brand_color }}
                             >
                                 Book Appointment
                             </Link>
 
+                            {/* Track Booking Button */}
+                            <Link
+                                href={trackHref}
+                                aria-disabled={!canNavigate}
+                                className={`block w-full rounded-lg border border-gray-100 bg-white py-3 px-6 font-semibold shadow-sm transition-transform hover:shadow-md active:scale-95 ${!canNavigate ? 'pointer-events-none opacity-60' : ''}`}
+                                style={{ color: shop.brand_color }}
+                            >
+                                Track My Status
+                            </Link>
+
                             {/* Barber Login Button */}
                             <Link
-                                href={`/login?shop_id=${shop.id}&shop_slug=${shop.slug}`}
+                                href={`/login?shop_id=${shop.id}&shop_slug=${safeSlug}`}
                                 className="block w-full py-3 px-6 rounded-lg font-semibold transition-colors hover:bg-gray-100"
                                 style={{
                                     color: shop.brand_color,

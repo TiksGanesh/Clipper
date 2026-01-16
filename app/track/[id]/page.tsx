@@ -332,6 +332,8 @@ export default function TrackBookingPage() {
                             </div>
                         )}
 
+                        <ShopGuidelines />
+
                         {/* Booking Details */}
                         <div className="bg-indigo-50 rounded-2xl p-6 space-y-3">
                             <h3 className="font-semibold text-gray-900 mb-4">Booking Details</h3>
@@ -388,7 +390,7 @@ export default function TrackBookingPage() {
                 </motion.div>
 
                 <div className="mt-8">
-                    <ShopGuidelines />
+                    
                 </div>
             </div>
         </div>

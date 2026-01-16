@@ -2,112 +2,114 @@
 
 import React, { useState, useEffect } from 'react'
 
-const DO_ITEMS = [
-    'Arrive 5 minutes before your slot.',
-    'Check-in with the barber upon arrival.',
-    'Cancel in advance if you cannot make it.',
+interface ShopGuidelinesProps {
+    compact?: boolean
+}
+
+const GUIDELINES = [
+    {
+        icon: '🕒',
+        text: 'Please arrive 5 mins early.',
+    },
+    {
+        icon: '👋',
+        text: 'Check in at the counter.',
+    },
+    {
+        icon: '⚠️',
+        text: 'Cancel in advance if you cannot make it.',
+    },
+    {
+        icon: '⚠️',
+        text: 'Do not be more than 10 minutes late (or you may lose your slot).',
+    },
 ]
 
-const DONT_ITEMS = [
-    'Do not be more than 10 minutes late (or you may lose your slot).',
-    'Do not attend if you are feeling unwell.',
-]
-
-// Combine all items for ticker view on mobile
-const ALL_ITEMS = [
-    ...DO_ITEMS.map((text) => ({ text, type: 'do' as const })),
-    ...DONT_ITEMS.map((text) => ({ text, type: 'dont' as const })),
-]
-
-export default function ShopGuidelines() {
+export default function ShopGuidelines({ compact = false }: ShopGuidelinesProps) {
+    const [showAll, setShowAll] = useState(false)
     const [currentIndex, setCurrentIndex] = useState(0)
 
     // Auto-rotate ticker on mobile
     useEffect(() => {
         const interval = setInterval(() => {
-            setCurrentIndex((prev) => (prev + 1) % ALL_ITEMS.length)
+            setCurrentIndex((prev) => (prev + 1) % GUIDELINES.length)
         }, 4000)
 
         return () => clearInterval(interval)
     }, [])
 
-    const currentItem = ALL_ITEMS[currentIndex]
+    const displayItems = compact && !showAll ? GUIDELINES.slice(0, 2) : GUIDELINES
+    const currentItem = GUIDELINES[currentIndex]
 
     return (
-        <section className="rounded-lg border border-gray-200 bg-gray-50 shadow-sm">
-            {/* Title */}
-            <div className="flex items-center gap-2 border-b border-gray-200 bg-white px-4 py-3 text-base font-semibold text-gray-900 md:px-6 md:py-4 md:text-lg">
-                <span aria-hidden="true">💡</span>
-                <span>Things to Keep in Mind</span>
+        <section className="rounded-2xl border border-purple-100 bg-white shadow-sm">
+            {/* Header */}
+            <div className="flex items-center gap-3 border-b border-purple-100 px-6 py-4">
+                <span aria-hidden="true" className="text-lg text-purple-600">
+                    💡
+                </span>
+                <h2 className="text-lg font-bold text-gray-800">Shop Guidelines</h2>
             </div>
 
             {/* Mobile Ticker View */}
             <div className="block p-4 md:hidden">
-                <div className="flex items-start gap-3 text-sm text-gray-800">
-                    <span
-                        aria-hidden="true"
-                        className={`mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-base ${currentItem.type === 'do'
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-red-100 text-red-700'
-                            }`}
-                    >
-                        {currentItem.type === 'do' ? '✅' : '❌'}
-                    </span>
-                    <span className="flex-1 pt-0.5">{currentItem.text}</span>
+                <div className="flex items-center gap-3 text-sm text-gray-800">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-purple-50 text-lg">
+                        {currentItem.icon}
+                    </div>
+                    <span className="flex-1 text-gray-700 leading-relaxed">{currentItem.text}</span>
                 </div>
                 {/* Pagination Dots */}
-                <div className="mt-3 flex items-center justify-center gap-1.5">
-                    {ALL_ITEMS.map((_, idx) => (
+                <div className="mt-4 flex items-center justify-center gap-1.5">
+                    {GUIDELINES.map((_, idx) => (
                         <button
                             key={idx}
                             onClick={() => setCurrentIndex(idx)}
-                            aria-label={`Go to tip ${idx + 1}`}
-                            className={`h-1.5 rounded-full transition-all ${idx === currentIndex ? 'w-6 bg-gray-700' : 'w-1.5 bg-gray-300'
+                            aria-label={`Go to guideline ${idx + 1}`}
+                            className={`h-1.5 rounded-full transition-all ${idx === currentIndex ? 'w-6 bg-purple-600' : 'w-1.5 bg-purple-200'
                                 }`}
                         />
                     ))}
                 </div>
             </div>
 
-            {/* Desktop Two-Column View */}
+            {/* Desktop List View */}
             <div className="hidden p-6 md:block">
-                <div className="grid gap-6 md:grid-cols-2">
-                    <div className="space-y-3">
-                        <h3 className="text-sm font-semibold uppercase tracking-wide text-green-700">
-                            Do&apos;s
-                        </h3>
-                        <ul className="space-y-3">
-                            {DO_ITEMS.map((item) => (
-                                <li key={item} className="flex items-start gap-3 text-sm text-gray-800">
-                                    <span
-                                        aria-hidden="true"
-                                        className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-100 text-base text-green-700"
-                                    >
-                                        ✅
-                                    </span>
-                                    <span>{item}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                    <div className="space-y-3">
-                        <h3 className="text-sm font-semibold uppercase tracking-wide text-red-700">
-                            Don&apos;ts
-                        </h3>
-                        <ul className="space-y-3">
-                            {DONT_ITEMS.map((item) => (
-                                <li key={item} className="flex items-start gap-3 text-sm text-gray-800">
-                                    <span
-                                        aria-hidden="true"
-                                        className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-red-100 text-base text-red-700"
-                                    >
-                                        ❌
-                                    </span>
-                                    <span>{item}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
+                <div className="space-y-4">
+                    <ul className="space-y-4">
+                        {displayItems.map((item, idx) => (
+                            <li key={idx} className="flex items-center gap-4">
+                                {/* Icon Circle */}
+                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-purple-50 text-lg">
+                                    {item.icon}
+                                </div>
+                                {/* Text */}
+                                <span className="text-sm text-gray-700 leading-relaxed">
+                                    {item.text}
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
+
+                    {/* View All Link - Compact Mode */}
+                    {compact && !showAll && (
+                        <button
+                            onClick={() => setShowAll(true)}
+                            className="mt-4 text-sm font-semibold text-purple-600 hover:text-purple-700 transition-colors"
+                        >
+                            View All →
+                        </button>
+                    )}
+
+                    {/* Collapse Link - When Expanded */}
+                    {compact && showAll && (
+                        <button
+                            onClick={() => setShowAll(false)}
+                            className="mt-4 text-sm font-semibold text-purple-600 hover:text-purple-700 transition-colors"
+                        >
+                            Show Less ↑
+                        </button>
+                    )}
                 </div>
             </div>
         </section>
