@@ -93,6 +93,17 @@ export default function BookingForm({ shop, barbers, services }: Props) {
     const totalDuration = useMemo(() => selectedServices.reduce((sum, s) => sum + (s.duration_minutes || 0), 0), [selectedServices])
     const totalPrice = useMemo(() => selectedServices.reduce((sum, s) => sum + (s.price || 0), 0), [selectedServices])
     const selectedServiceName = useMemo(() => selectedServices.map((s) => s.name).join(' + '), [selectedServices])
+    
+    // Form validity check - extracted for readability
+    const isFormValid = useMemo(() => {
+        return (
+            !!selectedSlot &&
+            customerPhone.replace(/\s/g, '').length === 10 &&
+            !phoneError &&
+            !nameError &&
+            !!customerName.trim()
+        )
+    }, [selectedSlot, customerPhone, phoneError, nameError, customerName])
 
     // --- Helpers ---
     const scrollToSection = (ref: React.RefObject<HTMLElement>) => {
@@ -1057,7 +1068,7 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                     {/* Pay Button */}
                     <button
                         onClick={handlePaymentAndBooking}
-                        disabled={submitting || !selectedSlot || customerPhone.replace(/\s/g, '').length !== 10 || !!phoneError || !!nameError || !customerName.trim()}
+                        disabled={submitting || !isFormValid}
                         className="w-full bg-indigo-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:shadow-none hover:bg-indigo-700 active:scale-95 transition-all flex items-center justify-center gap-2"
                     >
                         {submitting ? (

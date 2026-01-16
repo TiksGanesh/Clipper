@@ -17,6 +17,7 @@ interface ShopExperienceProps {
  */
 export function ShopExperience({ shop }: ShopExperienceProps) {
     const [showSplash, setShowSplash] = useState(true);
+    const [logoError, setLogoError] = useState(false);
     const safeSlug = shop.slug ?? '';
     const canNavigate = Boolean(safeSlug);
     const bookingHref = canNavigate ? `/shop/${safeSlug}/book` : '#';
@@ -31,6 +32,10 @@ export function ShopExperience({ shop }: ShopExperienceProps) {
         return () => clearTimeout(timer);
     }, []);
 
+    const handleLogoError = () => {
+        setLogoError(true);
+    };
+
     return (
         <div className="relative w-full h-screen overflow-hidden">
             {/* Splash Screen */}
@@ -41,7 +46,7 @@ export function ShopExperience({ shop }: ShopExperienceProps) {
             >
                 <div className="flex flex-col items-center gap-6">
                     {/* Logo */}
-                    {shop.logo_url ? (
+                    {shop.logo_url && !logoError ? (
                         <div className="relative w-24 h-24 animate-fade-in">
                             <Image
                                 src={shop.logo_url}
@@ -49,6 +54,7 @@ export function ShopExperience({ shop }: ShopExperienceProps) {
                                 fill
                                 className="object-contain"
                                 priority
+                                onError={handleLogoError}
                             />
                         </div>
                     ) : (
@@ -78,13 +84,14 @@ export function ShopExperience({ shop }: ShopExperienceProps) {
                 {/* Header */}
                 <header className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm">
                     <div className="max-w-4xl mx-auto flex items-center gap-3">
-                        {shop.logo_url ? (
+                        {shop.logo_url && !logoError ? (
                             <div className="relative w-10 h-10">
                                 <Image
                                     src={shop.logo_url}
                                     alt={shop.name}
                                     fill
                                     className="object-contain"
+                                    onError={handleLogoError}
                                 />
                             </div>
                         ) : (

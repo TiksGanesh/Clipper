@@ -1,5 +1,5 @@
 import { createServerActionClient } from '@/lib/supabase'
-import { NextResponse, NextRequest } from 'next/server'
+import { NextRequest } from 'next/server'
 import { redirect } from 'next/navigation'
 
 export async function POST(request: NextRequest) {

@@ -37,10 +37,10 @@ export async function createAdminShopAction(formData: FormData) {
 
     // Validate only allowed fields are present
     const allowedFields = ['name', 'owner_email', 'owner_password', 'owner_phone']
-    const submittedFields = Array.from(formData.keys()).filter(field => !field.match(/^\d+$|^\$K\d+$/)) // Ignore numeric indices and React keys
+    const submittedFields = Array.from(formData.keys())
     const unsupportedFields = submittedFields
         .map(field => field.replace(/^1_/, '')) // Remove the numeric prefix for validation
-        .filter(field => !allowedFields.includes(field))
+        .filter(field => !allowedFields.includes(field) && !/^\d+$|^\$K\d+$/.test(field))
     
     if (unsupportedFields.length > 0) {
         await fail('Unsupported fields detected. Only shop name, owner email, owner password, and owner phone are allowed.')

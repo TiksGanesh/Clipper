@@ -11,10 +11,10 @@ const BRAND_COLOR_PRESETS = [
     '#7C3AED', // Purple
 ]
 
-export default function SetupShopPage({
-    searchParams,
+function SetupShopForm({
+    error,
 }: {
-    searchParams: { error?: string }
+    error?: string
 }) {
     const [shopName, setShopName] = useState('')
     const [slug, setSlug] = useState('')
@@ -69,9 +69,9 @@ export default function SetupShopPage({
         <div className="max-w-lg mx-auto py-10">
             <h1 className="text-2xl font-bold mb-6">Step 1: Create Shop</h1>
 
-            {searchParams.error && (
+            {error && (
                 <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded">
-                    {searchParams.error}
+                    {error}
                 </div>
             )}
 
@@ -200,4 +200,12 @@ export default function SetupShopPage({
             </form>
         </div>
     )
+}
+
+export default function SetupShopPage({
+    searchParams,
+}: {
+    searchParams: { error?: string }
+}) {
+    return <SetupShopForm error={searchParams.error} />
 }

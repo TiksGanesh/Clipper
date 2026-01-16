@@ -9,7 +9,7 @@
 -- ========================================
 
 ALTER TABLE shops
-ADD COLUMN slug TEXT UNIQUE NOT NULL DEFAULT uuid_generate_v4()::text,
+ADD COLUMN slug TEXT UNIQUE NOT NULL,
 ADD COLUMN logo_url TEXT,
 ADD COLUMN brand_color TEXT NOT NULL DEFAULT '#4F46E5',
 ADD COLUMN tagline TEXT,
