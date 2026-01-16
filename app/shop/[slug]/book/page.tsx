@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import BookingForm from '@/components/booking/BookingForm'
 import { createServiceSupabaseClient } from '@/lib/supabase'
@@ -198,6 +199,13 @@ export default async function PublicShopBookingPage({ params }: { params: { slug
                     <p className="text-sm text-gray-600 mt-3">Book your appointment in seconds</p>
                 </header>
                 <BookingForm shop={shopForForm} barbers={barbers} services={services} />
+                <p className="mt-6 text-center text-sm text-gray-600">
+                    By booking, you agree to our{' '}
+                    <Link href="/terms" className="font-semibold text-blue-600 hover:text-blue-700">
+                        Terms of Service
+                    </Link>
+                    .
+                </p>
             </div>
         </div>
     )

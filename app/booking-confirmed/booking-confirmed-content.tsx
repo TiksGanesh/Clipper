@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import ShopGuidelines from '@/components/booking/ShopGuidelines'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 export default function BookingConfirmedContent() {
@@ -63,18 +64,18 @@ export default function BookingConfirmedContent() {
         <div className="flex flex-col items-center mb-6">
           <div className={`w-16 h-16 ${status === 'success' ? (isWalkIn ? 'bg-blue-50' : 'bg-emerald-50') : 'bg-red-50'} rounded-full flex items-center justify-center mb-4`}>
             {status === 'success' ? (
-              <svg 
+              <svg
                 className={`w-8 h-8 ${isWalkIn ? 'text-blue-500' : 'text-emerald-500'}`}
-                fill="none" 
-                stroke="currentColor" 
+                fill="none"
+                stroke="currentColor"
                 viewBox="0 0 24 24"
                 aria-hidden="true"
               >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M5 13l4 4L19 7" 
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
                 />
               </svg>
             ) : (
@@ -163,6 +164,10 @@ export default function BookingConfirmedContent() {
             </div>
           )}
 
+          <div className="mt-6">
+            <ShopGuidelines />
+          </div>
+
           {/* Payment Status */}
           <div className="border-t border-gray-200 pt-4">
             {status === 'success' ? (
@@ -206,7 +211,7 @@ export default function BookingConfirmedContent() {
               Track Booking Status
             </button>
           )}
-          
+
           <button
             type="button"
             onClick={() => {

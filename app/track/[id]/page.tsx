@@ -4,6 +4,7 @@ import { useParams } from 'next/navigation'
 import useSWR from 'swr'
 import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
+import ShopGuidelines from '@/components/booking/ShopGuidelines'
 
 type TrackingResponse = {
     booking: {
@@ -203,10 +204,10 @@ export default function TrackBookingPage() {
 
     // Check for API error responses (e.g., booking not found)
     const hasErrorResponse = data && 'error' in data
-    const errorMessage = hasErrorResponse && 'error' in data && typeof data.error === 'string' 
-        ? data.error 
+    const errorMessage = hasErrorResponse && 'error' in data && typeof data.error === 'string'
+        ? data.error
         : "We couldn't find this booking. Please check your booking ID."
-    
+
     if (error || hasErrorResponse) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100 flex items-center justify-center p-4">
@@ -385,6 +386,10 @@ export default function TrackBookingPage() {
                 >
                     <p>Track your booking in real-time</p>
                 </motion.div>
+
+                <div className="mt-8">
+                    <ShopGuidelines />
+                </div>
             </div>
         </div>
     )
