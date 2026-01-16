@@ -18,11 +18,11 @@ interface ShopExperienceProps {
 export function ShopExperience({ shop }: ShopExperienceProps) {
     const [showSplash, setShowSplash] = useState(true);
 
-    // Auto-hide splash screen after 2.5 seconds
+    // Auto-hide splash screen after 1.5 seconds
     useEffect(() => {
         const timer = setTimeout(() => {
             setShowSplash(false);
-        }, 2500);
+        }, 1500);
 
         return () => clearTimeout(timer);
     }, []);

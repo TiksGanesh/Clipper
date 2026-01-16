@@ -1,10 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 
 export default function LoginPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-gray-50" aria-busy="true" />}>
+            <LoginPageContent />
+        </Suspense>
+    )
+}
+
+function LoginPageContent() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [error, setError] = useState<string | null>(null)
