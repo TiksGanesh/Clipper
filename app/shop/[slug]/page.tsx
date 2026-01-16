@@ -20,12 +20,14 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { slug } = await params;
 
-    const { data: shop, error } = await supabase
+    const { data, error } = await supabase
         .from('shops')
         .select('*')
         .eq('slug', slug)
         .is('deleted_at', null)
         .single();
+
+    const shop = data as Database['public']['Tables']['shops']['Row'] | null;
 
     if (error || !shop) {
         return {

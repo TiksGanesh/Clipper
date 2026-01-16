@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import Image from 'next/image'
 import BookingForm from '@/components/booking/BookingForm'
 import { createServiceSupabaseClient } from '@/lib/supabase'
 import { getShopClosure, formatClosurePeriod } from '@/lib/shop-closure'
@@ -171,6 +172,7 @@ export default async function PublicShopBookingPage({ params }: { params: { slug
         name: shopData.name,
         address: shopData.address,
         phone: shopData.phone,
+        slug: shopData.slug,
     }
 
     return (
@@ -182,9 +184,11 @@ export default async function PublicShopBookingPage({ params }: { params: { slug
                 <header className="mb-6 text-center">
                     {shopData.logo_url && (
                         <div className="mb-4 flex justify-center">
-                            <img
+                            <Image
                                 src={shopData.logo_url}
                                 alt={shopData.name}
+                                width={64}
+                                height={64}
                                 className="h-16 object-contain"
                                 onError={(e) => {
                                     e.currentTarget.style.display = 'none'

@@ -1,15 +1,26 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 
 export default function LoginPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-gray-50" aria-busy="true" />}>
+            <LoginPageContent />
+        </Suspense>
+    )
+}
+
+function LoginPageContent() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const shopId = searchParams.get('shop_id')
+    const shopSlug = searchParams.get('shop_slug')
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault()

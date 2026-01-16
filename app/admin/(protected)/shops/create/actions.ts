@@ -10,6 +10,8 @@ const PHONE_DIGITS_MAX = 15
 const CREATE_ROUTE = '/admin/shops/create'
 
 export async function createAdminShopAction(formData: FormData) {
+    console.log('[createAdminShopAction] START - FormData keys:', Array.from(formData.keys()))
+    
     await requireAdminContext()
     const supabase = createServiceSupabaseClient()
 
@@ -18,23 +20,43 @@ export async function createAdminShopAction(formData: FormData) {
     let ownerCreatedHere = false
 
     const fail = async (message: string, redirectPath: string = CREATE_ROUTE) => {
+        console.log('[createAdminShopAction] FAIL:', message)
         await cleanupPartialCreation(supabase, { shopId: createdShopId, ownerId: createdOwnerId })
         redirect(`${redirectPath}?error=${encodeURIComponent(message)}`)
     }
 
+    // Helper to get field value, handling both direct and numbered field names
+    const getFieldValue = (name: string): string | null => {
+        let value = formData.get(name) as string | null
+        if (!value) {
+            // Try numbered variant (e.g., "1_name" for "name")
+            value = formData.get(`1_${name}`) as string | null
+        }
+        return value
+    }
+
     // Validate only allowed fields are present
     const allowedFields = ['name', 'owner_email', 'owner_password', 'owner_phone']
-    const submittedFields = Array.from(formData.keys())
-    const unsupportedFields = submittedFields.filter(field => !allowedFields.includes(field))
+    const submittedFields = Array.from(formData.keys()).filter(field => !field.match(/^\d+$|^\$K\d+$/)) // Ignore numeric indices and React keys
+    const unsupportedFields = submittedFields
+        .map(field => field.replace(/^1_/, '')) // Remove the numeric prefix for validation
+        .filter(field => !allowedFields.includes(field))
     
     if (unsupportedFields.length > 0) {
         await fail('Unsupported fields detected. Only shop name, owner email, owner password, and owner phone are allowed.')
     }
 
-    const name = (formData.get('name') as string)?.trim()
-    const ownerEmail = (formData.get('owner_email') as string)?.trim()
-    const ownerPassword = (formData.get('owner_password') as string)?.trim()
-    const ownerPhone = ((formData.get('owner_phone') as string) || '')?.trim() || null
+    const name = (getFieldValue('name') as string)?.trim()
+    const ownerEmail = (getFieldValue('owner_email') as string)?.trim()
+    const ownerPassword = (getFieldValue('owner_password') as string)?.trim()
+    const ownerPhone = ((getFieldValue('owner_phone') as string) || '')?.trim() || null
+
+    console.log('[createAdminShopAction] Extracted fields:', {
+        name: name ? '***' : 'MISSING',
+        ownerEmail,
+        ownerPassword: ownerPassword ? '***' : 'MISSING',
+        ownerPhone
+    })
 
     if (!name || !ownerEmail || !ownerPassword) {
         await fail('Shop name, owner email, and owner password are required')
@@ -54,6 +76,8 @@ export async function createAdminShopAction(formData: FormData) {
     }
 
     const { id: existingOwnerId, error: ownerLookupError } = await safeFindUserIdByEmail(supabase, ownerEmail)
+    console.log('[createAdminShopAction] Owner lookup:', { found: !!existingOwnerId, error: ownerLookupError })
+    
     if (ownerLookupError) {
         await fail(ownerLookupError)
     }
@@ -62,6 +86,7 @@ export async function createAdminShopAction(formData: FormData) {
 
     // If owner exists, ensure not admin and not already owning a shop
     if (resolvedOwnerId) {
+        console.log('[createAdminShopAction] Checking if owner is admin:', resolvedOwnerId)
         const { data: adminMembership, error: adminCheckError } = await supabase
             .from('admin_users')
             .select('user_id')
@@ -80,16 +105,24 @@ export async function createAdminShopAction(formData: FormData) {
 
     // If owner does not exist, create the account (email invite disabled for now)
     if (!resolvedOwnerId) {
+        console.log('[createAdminShopAction] Creating new owner account:', ownerEmail)
         const { data: created, error: createError } = await supabase.auth.admin.createUser({
             email: ownerEmail,
             password: ownerPassword,
             email_confirm: true,
         })
 
+        console.log('[createAdminShopAction] Owner creation result:', {
+            success: !!created?.user?.id,
+            error: createError?.message,
+            userId: created?.user?.id
+        })
+
         if (createError || !created?.user) {
             // Retry-safe: if account already exists, reuse it
             const duplicateEmail = createError?.message?.toLowerCase().includes('already') || createError?.message?.toLowerCase().includes('exists')
             if (duplicateEmail) {
+                console.log('[createAdminShopAction] Duplicate email detected, retrying lookup')
                 const { id: fallbackOwnerId } = await safeFindUserIdByEmail(supabase, ownerEmail)
                 if (fallbackOwnerId) {
                     resolvedOwnerId = fallbackOwnerId
@@ -116,26 +149,32 @@ export async function createAdminShopAction(formData: FormData) {
 
     // TypeScript assertion: resolvedOwnerId is guaranteed to be string here due to above check
     const ownerId = resolvedOwnerId as string
+    console.log('[createAdminShopAction] Resolved owner ID:', ownerId)
 
     // For fresh owners, set a known password
     const shouldSetPassword = ownerCreatedHere
     if (shouldSetPassword) {
+        console.log('[createAdminShopAction] Setting password for new owner')
         const { error: passwordError } = await supabase.auth.admin.updateUserById(ownerId, {
             password: ownerPassword,
         })
 
         if (passwordError) {
+            console.log('[createAdminShopAction] Password error:', passwordError)
             await fail('Unable to set owner password. Please try again.')
         }
     }
 
     let shopId: string | null = null
 
+    console.log('[createAdminShopAction] Checking for existing shops for owner:', ownerId)
     const { data: existingShop, error: existingShopError } = await supabase
         .from('shops')
         .select('id, deleted_at')
         .eq('owner_id', ownerId)
         .maybeSingle() as { data: { id: string; deleted_at: string | null } | null; error: any }
+
+    console.log('[createAdminShopAction] Existing shop check:', { found: !!existingShop, error: existingShopError })
 
     if (existingShopError) {
         await fail('Unable to verify existing shops for this owner.')
@@ -150,6 +189,7 @@ export async function createAdminShopAction(formData: FormData) {
     }
 
     if (!shopId) {
+        console.log('[createAdminShopAction] Creating new shop with data:', { name, ownerId })
         const { data: inserted, error: insertError } = (await supabase
             .from('shops')
             // @ts-ignore - Supabase service client type inference issue
@@ -162,8 +202,16 @@ export async function createAdminShopAction(formData: FormData) {
             .select('id')
             .single()) as { data: { id: string } | null; error: any }
 
+        console.log('[createAdminShopAction] Shop insert result:', {
+            success: !!inserted?.id,
+            error: insertError?.message,
+            code: insertError?.code,
+            shopId: inserted?.id
+        })
+
         if (insertError || !inserted) {
             if (insertError?.code === '23505') {
+                console.log('[createAdminShopAction] Duplicate key, attempting fallback lookup')
                 const fallbackShopId = await findShopIdByOwnerId(supabase, ownerId)
                 if (fallbackShopId) {
                     shopId = fallbackShopId
@@ -185,7 +233,9 @@ export async function createAdminShopAction(formData: FormData) {
 
     // TypeScript assertion: shopId is guaranteed to be string here due to above check
     const finalShopId = shopId as string
+    console.log('[createAdminShopAction] Final shop ID:', finalShopId)
 
+    console.log('[createAdminShopAction] Checking for existing barbers')
     const { data: existingBarbers, error: existingBarbersError } = await supabase
         .from('barbers')
         .select('id, name, phone, deleted_at')
@@ -198,6 +248,7 @@ export async function createAdminShopAction(formData: FormData) {
 
     // If shop exists and has barbers, redirect to it
     if (existingShop && existingBarbers && existingBarbers.length > 0) {
+        console.log('[createAdminShopAction] Shop already exists with barbers, redirecting')
         redirect(`/admin/shops/${finalShopId}`)
     }
 
@@ -207,7 +258,9 @@ export async function createAdminShopAction(formData: FormData) {
     }
 
     // Create trial subscription for the shop
+    console.log('[createAdminShopAction] Creating trial subscription for shop:', finalShopId)
     await createTrialSubscription(finalShopId)
+    console.log('[createAdminShopAction] SUCCESS - Shop created:', finalShopId)
 
     redirect(`/admin/shops/${finalShopId}?success=${encodeURIComponent('Shop created successfully')}`)
 }
