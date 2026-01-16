@@ -9,6 +9,7 @@ type Shop = {
     name: string
     address: string | null
     phone: string | null
+    slug?: string
 }
 
 type Barber = {
@@ -52,7 +53,9 @@ export default function BookingForm({ shop, barbers, services }: Props) {
     const [slots, setSlots] = useState<Slot[]>([])
     const [selectedSlot, setSelectedSlot] = useState<string>('')
     const [customerName, setCustomerName] = useState('')
+    const [nameError, setNameError] = useState('')
     const [customerPhone, setCustomerPhone] = useState('')
+    const [phoneError, setPhoneError] = useState('')
     const [activeTab, setActiveTab] = useState<'morning' | 'afternoon' | 'evening'>('morning')
     const [dateOptions, setDateOptions] = useState<Array<{ value: string; label: string; fullLabel: string }>>([])
     const [holdBookingId, setHoldBookingId] = useState<string | null>(null)
@@ -90,6 +93,17 @@ export default function BookingForm({ shop, barbers, services }: Props) {
     const totalDuration = useMemo(() => selectedServices.reduce((sum, s) => sum + (s.duration_minutes || 0), 0), [selectedServices])
     const totalPrice = useMemo(() => selectedServices.reduce((sum, s) => sum + (s.price || 0), 0), [selectedServices])
     const selectedServiceName = useMemo(() => selectedServices.map((s) => s.name).join(' + '), [selectedServices])
+    
+    // Form validity check - extracted for readability
+    const isFormValid = useMemo(() => {
+        return (
+            !!selectedSlot &&
+            customerPhone.replace(/\s/g, '').length === 10 &&
+            !phoneError &&
+            !nameError &&
+            !!customerName.trim()
+        )
+    }, [selectedSlot, customerPhone, phoneError, nameError, customerName])
 
     // --- Helpers ---
     const scrollToSection = (ref: React.RefObject<HTMLElement>) => {
@@ -116,10 +130,82 @@ export default function BookingForm({ shop, barbers, services }: Props) {
         return cleaned
     }
 
+    const validatePhone = (number: string) => {
+        // Remove non-numeric characters
+        const cleaned = number.replace(/\D/g, '')
+
+        // Check length
+        if (cleaned.length < 10) {
+            setPhoneError('Number is too short')
+            return false
+        }
+
+        if (cleaned.length > 10) {
+            setPhoneError('Number is too long')
+            return false
+        }
+
+        // Check Indian phone regex: starts with 6-9, followed by 9 digits
+        const indianPhoneRegex = /^[6-9]\d{9}$/
+        if (!indianPhoneRegex.test(cleaned)) {
+            setPhoneError('Please enter a valid mobile number')
+            return false
+        }
+
+        // Valid
+        setPhoneError('')
+        return true
+    }
+
     const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const formatted = formatPhone(e.target.value)
         if (formatted.replace(/\s/g, '').length <= 10) {
             setCustomerPhone(formatted)
+        }
+    }
+
+    const handlePhoneBlur = () => {
+        if (customerPhone) {
+            validatePhone(customerPhone)
+        }
+    }
+
+    const validateName = (name: string) => {
+        // Allow only letters (a-z, A-Z) and spaces
+        const nameRegex = /^[a-zA-Z\s]*$/
+
+        if (!name.trim()) {
+            setNameError('Name is required')
+            return false
+        }
+
+        if (name.length > 50) {
+            setNameError('Name must be 50 characters or less')
+            return false
+        }
+
+        if (!nameRegex.test(name)) {
+            setNameError('Only letters and spaces are allowed')
+            return false
+        }
+
+        // Valid
+        setNameError('')
+        return true
+    }
+
+    const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value
+        // Only allow letters and spaces
+        const filtered = value.replace(/[^a-zA-Z\s]/g, '')
+        if (filtered.length <= 50) {
+            setCustomerName(filtered)
+        }
+    }
+
+    const handleNameBlur = () => {
+        if (customerName) {
+            validateName(customerName)
         }
     }
 
@@ -367,6 +453,8 @@ export default function BookingForm({ shop, barbers, services }: Props) {
             const bookingParams = new URLSearchParams({
                 status: 'success',
                 shop: shop.name,
+                shop_id: shop.id,
+                shop_slug: shop.slug || '',
                 barber: selectedBarber?.name || '',
                 services: selectedServiceName,
                 date: date,
@@ -418,6 +506,8 @@ export default function BookingForm({ shop, barbers, services }: Props) {
             const bookingParams = new URLSearchParams({
                 status: 'success',
                 shop: shop.name,
+                shop_id: shop.id,
+                shop_slug: shop.slug || '',
                 barber: selectedBarber?.name || '',
                 services: selectedServiceName,
                 date: date,
@@ -890,14 +980,20 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                             <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
                             <input
                                 type="text"
-                                maxLength={100}
+                                maxLength={50}
                                 required
                                 minLength={1}
-                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-shadow"
+                                className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-colors ${
+                                    nameError ? 'border-red-300 bg-red-50/50' : 'border-gray-200'
+                                }`}
                                 value={customerName}
-                                onChange={(e) => setCustomerName(e.target.value)}
+                                onChange={handleNameChange}
+                                onBlur={handleNameBlur}
                                 placeholder="Enter your name"
                             />
+                            {nameError && (
+                                <p className="mt-2 text-sm font-medium text-red-600">{nameError}</p>
+                            )}
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone Number</label>
@@ -909,13 +1005,19 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                                     pattern="[0-9 ]{10,11}"
                                     required
                                     title="Enter a valid 10-digit phone number"
-                                    className="w-full pl-16 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium tracking-wide"
+                                    className={`w-full pl-16 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium tracking-wide transition-colors ${
+                                        phoneError ? 'border-red-300 bg-red-50/50' : 'border-gray-200'
+                                    }`}
                                     value={customerPhone}
                                     onChange={handlePhoneChange}
+                                    onBlur={handlePhoneBlur}
                                     placeholder="98765 00000"
                                     maxLength={11}
                                 />
                             </div>
+                            {phoneError && (
+                                <p className="mt-2 text-sm font-medium text-red-600">{phoneError}</p>
+                            )}
                         </div>
                     </div>
                 </section>
@@ -966,7 +1068,7 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                     {/* Pay Button */}
                     <button
                         onClick={handlePaymentAndBooking}
-                        disabled={submitting || !selectedSlot || customerPhone.replace(/\s/g, '').length < 10}
+                        disabled={submitting || !isFormValid}
                         className="w-full bg-indigo-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:shadow-none hover:bg-indigo-700 active:scale-95 transition-all flex items-center justify-center gap-2"
                     >
                         {submitting ? (

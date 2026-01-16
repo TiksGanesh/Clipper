@@ -22,9 +22,10 @@ type Props = {
     barberCount: number
     serviceCount: number
     todayRevenue?: number
+    shopSlug?: string
 }
 
-export default function DashboardContent({ barbers = [], setupStatus, barberCount = 0, serviceCount = 0, todayRevenue = 0 }: Props) {
+export default function DashboardContent({ barbers = [], setupStatus, barberCount = 0, serviceCount = 0, todayRevenue = 0, shopSlug }: Props) {
     // Determine if there are setup improvements possible
     const canAddBarber = barberCount === 1 // Can add second barber
     const needsMoreServices = serviceCount < 3 // Suggest adding more services for variety

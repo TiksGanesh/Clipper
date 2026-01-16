@@ -3,13 +3,18 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { withProgress } from '@/lib/safe-action'
-import { saveShopClosureAction, saveShopNameAction, saveWorkingHoursAction, saveBarberDetailsAction, saveShopContactAction, addBarberAction, saveLunchBreakAction } from '@/app/dashboard/edit-shop/actions'
+import { saveShopClosureAction, saveShopNameAction, saveWorkingHoursAction, saveBarberDetailsAction, saveShopContactAction, addBarberAction, saveLunchBreakAction, saveBrandingAction } from '@/app/dashboard/edit-shop/actions'
 
 type Shop = {
     id: string
     name: string
     phone: string | null
     address: string | null
+    slug: string
+    brand_color: string
+    logo_url: string | null
+    tagline: string | null
+    splash_image_url: string | null
 }
 
 type Barber = {
@@ -37,6 +42,14 @@ type Props = {
 
 const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
+const BRAND_COLOR_PRESETS = [
+    '#4F46E5', // Indigo
+    '#DC2626', // Red
+    '#16A34A', // Green
+    '#2563EB', // Blue
+    '#7C3AED', // Purple
+]
+
 export default function EditShopInformation({ shop, barbers, workingHours, userEmail, lunchStart = '', lunchEnd = '' }: Props) {
     const [shopName, setShopName] = useState(shop.name)
     const [shopPhone, setShopPhone] = useState(shop.phone || '')
@@ -57,6 +70,15 @@ export default function EditShopInformation({ shop, barbers, workingHours, userE
     const [newBarberPhone, setNewBarberPhone] = useState('')
     const [addBarberError, setAddBarberError] = useState('')
     const [confirmCloseDay, setConfirmCloseDay] = useState<string | null>(null)
+
+    // Branding state
+    const [brandColor, setBrandColor] = useState(shop.brand_color || '#4F46E5')
+    const [useCustomColor, setUseCustomColor] = useState(false)
+    const [customColor, setCustomColor] = useState(shop.brand_color || '#4F46E5')
+    const [logoUrl, setLogoUrl] = useState(shop.logo_url || '')
+    const [tagline, setTagline] = useState(shop.tagline || '')
+    const [splashImageUrl, setSplashImageUrl] = useState(shop.splash_image_url || '')
+    const [logoPreview, setLogoPreview] = useState<string | null>(shop.logo_url || null)
 
     const handleBarberNameChange = (id: string, name: string) => {
         setBarberData((prev) => prev.map((b) => (b.id === id ? { ...b, name } : b)))
@@ -126,6 +148,21 @@ export default function EditShopInformation({ shop, barbers, workingHours, userE
             const closureResult = await withProgress(saveShopClosureAction(closedFrom, closedTo, closureReason, isClosed))
             if (!closureResult.success) {
                 setSaveError(closureResult.error || 'Failed to save shop closure')
+                setIsSaving(false)
+                return
+            }
+
+            // Save branding
+            const brandingResult = await withProgress(
+                saveBrandingAction(
+                    useCustomColor ? customColor : brandColor,
+                    logoUrl,
+                    tagline,
+                    splashImageUrl
+                )
+            )
+            if (!brandingResult.success) {
+                setSaveError(brandingResult.error || 'Failed to save branding')
                 setIsSaving(false)
                 return
             }
@@ -252,7 +289,7 @@ export default function EditShopInformation({ shop, barbers, workingHours, userE
                                     </span>
                                 )}
                             </div>
-                            
+
                             {hours[day]?.isOpen ? (
                                 <>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -510,6 +547,122 @@ export default function EditShopInformation({ shop, barbers, workingHours, userE
                             </button>
                         </div>
                     )}
+                </div>
+            </section>
+
+            {/* BRANDING SECTION */}
+            <section className="bg-white rounded-lg border border-gray-200 p-5">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Shop Branding</h3>
+
+                {/* Shop URL (Read-only) */}
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Shop URL</label>
+                    <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded border border-gray-200">
+                        <span className="text-gray-500 text-sm">/shop/</span>
+                        <span className="text-gray-900 font-medium">{shop.slug}</span>
+                        <span className="text-xs text-gray-500 ml-auto">(Cannot be changed)</span>
+                    </div>
+                </div>
+
+                {/* Brand Color */}
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Brand Color</label>
+                    <div className="flex gap-2 mb-3">
+                        {BRAND_COLOR_PRESETS.map((color) => (
+                            <button
+                                key={color}
+                                type="button"
+                                onClick={() => {
+                                    setBrandColor(color)
+                                    setUseCustomColor(false)
+                                }}
+                                className={`w-8 h-8 rounded-full border-2 transition-transform ${brandColor === color && !useCustomColor
+                                        ? 'border-gray-800 scale-110'
+                                        : 'border-gray-300 hover:scale-105'
+                                    }`}
+                                style={{ backgroundColor: color }}
+                                title={color}
+                            />
+                        ))}
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="color"
+                            value={useCustomColor ? customColor : brandColor}
+                            onChange={(e) => {
+                                setCustomColor(e.target.value)
+                                setBrandColor(e.target.value)
+                                setUseCustomColor(true)
+                            }}
+                            className="w-12 h-10 rounded border cursor-pointer"
+                        />
+                        <span className="text-sm text-gray-600">
+                            {useCustomColor ? customColor : brandColor}
+                        </span>
+                    </div>
+                </div>
+
+                {/* Logo URL */}
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Logo URL (optional)</label>
+                    <input
+                        type="url"
+                        value={logoUrl}
+                        onChange={(e) => {
+                            setLogoUrl(e.target.value)
+                            setLogoPreview(e.target.value || null)
+                        }}
+                        placeholder="https://example.com/logo.png"
+                        className="w-full border px-3 py-2 rounded text-sm"
+                    />
+                    {logoPreview && (
+                        <div className="mt-2 flex items-center gap-2">
+                            <span className="text-xs text-gray-500">Preview:</span>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                                src={logoPreview}
+                                alt="Logo preview"
+                                className="w-12 h-12 object-contain rounded border border-gray-200"
+                                onError={() => setLogoPreview(null)}
+                            />
+                        </div>
+                    )}
+                </div>
+
+                {/* Tagline */}
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Tagline (optional)
+                        <span className="text-xs text-gray-500 ml-1">
+                            {tagline.length}/150
+                        </span>
+                    </label>
+                    <input
+                        type="text"
+                        value={tagline}
+                        onChange={(e) => setTagline(e.target.value.slice(0, 150))}
+                        placeholder="e.g., Premium haircuts since 2020"
+                        maxLength={150}
+                        className="w-full border px-3 py-2 rounded text-sm"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                        Appears on splash screen and landing page
+                    </p>
+                </div>
+
+                {/* Splash Image URL */}
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Splash Image URL (optional)</label>
+                    <input
+                        type="url"
+                        value={splashImageUrl}
+                        onChange={(e) => setSplashImageUrl(e.target.value)}
+                        placeholder="https://example.com/splash.jpg"
+                        className="w-full border px-3 py-2 rounded text-sm"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                        Background image for the splash screen
+                    </p>
                 </div>
             </section>
 

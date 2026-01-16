@@ -34,6 +34,37 @@ function validatePhone(value: string | null, opts: { label: string; required: bo
     return { ok: true, normalized: trimmed }
 }
 
+// Validation helpers for branding
+function validateBrandColor(color: string): { ok: boolean; message?: string } {
+    const hexRegex = /^#(?:[0-9a-f]{3}){1,2}$/i
+    if (!hexRegex.test(color)) {
+        return { ok: false, message: 'Invalid color format. Use hex code (e.g., #FF6B6B)' }
+    }
+    return { ok: true }
+}
+
+function validateUrl(url: string | null): { ok: boolean; message?: string } {
+    if (!url || url.length === 0) {
+        return { ok: true } // Optional field
+    }
+    try {
+        new URL(url)
+        return { ok: true }
+    } catch {
+        return { ok: false, message: 'Invalid URL format' }
+    }
+}
+
+function validateTagline(tagline: string | null): { ok: boolean; message?: string } {
+    if (!tagline || tagline.length === 0) {
+        return { ok: true } // Optional field
+    }
+    if (tagline.length > 150) {
+        return { ok: false, message: 'Tagline must be 150 characters or less' }
+    }
+    return { ok: true }
+}
+
 export async function saveShopClosureAction(
     closedFrom: string,
     closedTo: string,
@@ -583,5 +614,84 @@ export async function addBarberAction(name: string, phone: string | null) {
     return {
         success: true,
     }
+}
+
+export async function saveBrandingAction(
+    brandColor: string,
+    logoUrl: string | null,
+    tagline: string | null,
+    splashImageUrl: string | null
+) {
+    const user = await requireAuth()
+    const supabase = await createServerSupabaseClient()
+
+    // Validate brand color
+    const colorValidation = validateBrandColor(brandColor)
+    if (!colorValidation.ok) {
+        return { success: false, error: colorValidation.message }
+    }
+
+    // Validate logo URL
+    const logoValidation = validateUrl(logoUrl)
+    if (!logoValidation.ok) {
+        return { success: false, error: logoValidation.message }
+    }
+
+    // Validate splash image URL
+    const splashValidation = validateUrl(splashImageUrl)
+    if (!splashValidation.ok) {
+        return { success: false, error: splashValidation.message }
+    }
+
+    // Validate tagline
+    const taglineValidation = validateTagline(tagline)
+    if (!taglineValidation.ok) {
+        return { success: false, error: taglineValidation.message }
+    }
+
+    // Get shop
+    const { data: shop, error: shopError } = await supabase
+        .from('shops')
+        .select('id, slug')
+        .eq('owner_id', user.id)
+        .is('deleted_at', null)
+        .maybeSingle() as ShopIdResult
+
+    if (shopError || !shop) {
+        return { success: false, error: 'Shop not found' }
+    }
+
+    // CRITICAL SECURITY: Check subscription access
+    const accessCheck = await checkSubscriptionAccess(shop.id)
+    if (!accessCheck.allowed) {
+        return {
+            success: false,
+            error: 'Your subscription is not active. Please contact support.',
+        }
+    }
+
+    // Update branding fields
+    const { error: updateError } = await supabase
+        .from('shops')
+        // @ts-expect-error - Supabase type inference issue
+        .update({
+            brand_color: brandColor,
+            logo_url: logoUrl || null,
+            tagline: tagline || null,
+            splash_image_url: splashImageUrl || null,
+        })
+        .eq('id', shop.id)
+
+    if (updateError) {
+        console.error('Error updating branding:', updateError)
+        return {
+            success: false,
+            error: 'Failed to save branding. Please try again.',
+        }
+    }
+
+    revalidatePath('/dashboard/edit-shop')
+
+    return { success: true }
 }
 
