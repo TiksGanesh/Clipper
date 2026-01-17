@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Script from 'next/script'
-import { useShopTerminology, BusinessType } from '@/src/hooks/useShopTerminology'
+import { getShopTerminology, BusinessType } from '@/src/hooks/useShopTerminology'
 
 type Shop = {
     id: string
@@ -43,7 +43,7 @@ export default function BookingForm({ shop, barbers, services }: Props) {
     const router = useRouter()
 
     // Get dynamic terminology based on business type
-    const terms = useShopTerminology(
+    const terms = getShopTerminology(
         (shop.business_type as BusinessType) || 'barber',
         shop.terminology_overrides
     )

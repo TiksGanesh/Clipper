@@ -9,7 +9,7 @@ import {
     markBookingNoShowAction,
     createBreakAction,
 } from '@/app/barber/calendar/actions'
-import { useShopTerminology, type BusinessType } from '@/src/hooks/useShopTerminology'
+import { getShopTerminology, type BusinessType } from '@/src/hooks/useShopTerminology'
 import WeekView from './WeekView'
 import AppointmentDetailSheet from './AppointmentDetailSheet'
 
@@ -202,7 +202,7 @@ export default function DayView({ barbers, initialDate, initialBarberId, isReadO
     const [createType, setCreateType] = useState<'client' | 'break'>('client')
     const [businessType, setBusinessType] = useState<BusinessType>('barber')
     const [terminologyOverrides, setTerminologyOverrides] = useState(null)
-    const terms = useShopTerminology(businessType, terminologyOverrides)
+    const terms = getShopTerminology(businessType, terminologyOverrides)
 
     // Fetch shop business type and terminology on mount
     useEffect(() => {

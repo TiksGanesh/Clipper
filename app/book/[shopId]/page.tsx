@@ -3,7 +3,7 @@ import BookingForm from '@/components/booking/BookingForm'
 import { createServiceSupabaseClient } from '@/lib/supabase'
 import { getShopClosure, formatClosurePeriod } from '@/lib/shop-closure'
 import BookingErrorPage from '@/components/booking/BookingErrorPage'
-import { useShopTerminology, type BusinessType } from '@/src/hooks/useShopTerminology'
+import { getShopTerminology, type BusinessType } from '@/src/hooks/useShopTerminology'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -26,7 +26,7 @@ export default async function PublicBookingPage({ params }: { params: { shopId: 
     const shopIdValue = shopData.id
 
     // Get terminology for this shop
-    const terms = useShopTerminology(
+    const terms = getShopTerminology(
         shopData.business_type || 'barber',
         shopData.terminology_overrides
     )

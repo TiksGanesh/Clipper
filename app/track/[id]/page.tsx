@@ -5,7 +5,7 @@ import useSWR from 'swr'
 import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 import ShopGuidelines from '@/components/booking/ShopGuidelines'
-import { useShopTerminology, type BusinessType } from '@/src/hooks/useShopTerminology'
+import { getShopTerminology, type BusinessType } from '@/src/hooks/useShopTerminology'
 
 type TrackingResponse = {
     booking: {
@@ -198,7 +198,7 @@ export default function TrackBookingPage() {
     const [showContent, setShowContent] = useState(false)
     const [copiedId, setCopiedId] = useState(false)
     const [businessType, setBusinessType] = useState<BusinessType>('barber')
-    const terms = useShopTerminology(businessType)
+    const terms = getShopTerminology(businessType)
 
     useEffect(() => {
         if (data) {

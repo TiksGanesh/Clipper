@@ -54,7 +54,7 @@ const DEFAULT_TERMS: Record<BusinessType, ShopTerminology> = {
 // ========================================
 
 /**
- * useShopTerminology Hook
+ * getShopTerminology
  *
  * Merges default terminology for a business type with optional custom overrides.
  *
@@ -63,15 +63,15 @@ const DEFAULT_TERMS: Record<BusinessType, ShopTerminology> = {
  * @returns Merged ShopTerminology object with all fields populated
  *
  * @example
- * // In a React component
- * const terms = useShopTerminology(shop.business_type, shop.terminology_overrides);
+ * // In a React component or server component
+ * const terms = getShopTerminology(shop.business_type, shop.terminology_overrides);
  *
  * // Use the terminology in UI
  * <button>{terms.booking_action}</button>
  * <p>We have {peopleAhead} {terms.queue_msg}</p>
  * <h2>{terms.staff_label}s Available</h2>
  */
-export function useShopTerminology(
+export function getShopTerminology(
     businessType: BusinessType,
     overrides?: TerminologyOverrides | null
 ): ShopTerminology {
@@ -110,3 +110,9 @@ export function getDefaultTerminology(
 ): ShopTerminology {
     return DEFAULT_TERMS[businessType] || DEFAULT_TERMS.barber;
 }
+
+/**
+ * @deprecated Use getShopTerminology instead
+ * Backwards compatibility alias for useShopTerminology
+ */
+export const useShopTerminology = getShopTerminology;

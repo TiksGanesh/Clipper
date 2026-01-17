@@ -3,7 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
 import { saveBarbersAction } from '@/app/setup/actions'
 import type { Database } from '@/types/database'
-import { useShopTerminology, type BusinessType } from '@/src/hooks/useShopTerminology'
+import { getShopTerminology, type BusinessType } from '@/src/hooks/useShopTerminology'
 
 export default async function SetupBarbersPage() {
     const user = await requireAuth()
@@ -21,7 +21,7 @@ export default async function SetupBarbersPage() {
 
     type ShopId = Pick<Database['public']['Tables']['shops']['Row'], 'id'>
 
-    const { data: shop } = await supabase
+    const { data: shop } = await (supabase as any)
         .from('shops')
         .select('id, business_type, terminology_overrides')
         .eq('owner_id', user.id)
@@ -33,7 +33,7 @@ export default async function SetupBarbersPage() {
     }
 
     // Get terminology for this shop
-    const terms = useShopTerminology(
+    const terms = getShopTerminology(
         (shop as any).business_type || 'barber',
         (shop as any).terminology_overrides
     )

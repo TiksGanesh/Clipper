@@ -52,10 +52,10 @@ export async function PATCH(
         }
 
         // Update terminology overrides
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
             .from('shops')
             .update({
-                terminology_overrides,
+                terminology_overrides: terminology_overrides,
                 updated_at: new Date().toISOString()
             })
             .eq('id', params.shopId)
@@ -97,7 +97,7 @@ export async function GET(
         const supabase = createServiceSupabaseClient()
 
         // Fetch shop terminology
-        const { data: shop, error } = await supabase
+        const { data: shop, error } = await (supabase as any)
             .from('shops')
             .select('id, name, business_type, terminology_overrides')
             .eq('id', params.shopId)

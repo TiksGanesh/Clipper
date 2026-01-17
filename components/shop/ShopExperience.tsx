@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Database } from '@/types/database';
-import { useShopTerminology, BusinessType } from '@/src/hooks/useShopTerminology';
+import { getShopTerminology, BusinessType } from '@/src/hooks/useShopTerminology';
 
 type Shop = Database['public']['Tables']['shops']['Row'];
 
@@ -25,7 +25,7 @@ export function ShopExperience({ shop }: ShopExperienceProps) {
     const trackHref = canNavigate ? `/shop/${safeSlug}/track` : '#';
 
     // Get dynamic terminology based on business type
-    const terms = useShopTerminology(
+    const terms = getShopTerminology(
         (shop.business_type as BusinessType) || 'barber',
         shop.terminology_overrides
     );

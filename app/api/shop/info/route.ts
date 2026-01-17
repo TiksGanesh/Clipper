@@ -2,6 +2,8 @@ import { requireAuth } from '@/lib/auth'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { NextRequest, NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * GET /api/shop/info
  * 

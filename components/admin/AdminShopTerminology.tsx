@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { useShopTerminology, BusinessType, getDefaultTerminology } from '@/src/hooks/useShopTerminology'
+import { getShopTerminology, BusinessType, getDefaultTerminology } from '@/src/hooks/useShopTerminology'
 
 interface Shop {
     id: string
@@ -16,7 +16,7 @@ interface AdminShopTerminologyProps {
 }
 
 interface TerminologyField {
-    key: keyof ReturnType<typeof useShopTerminology>
+    key: keyof ReturnType<typeof getShopTerminology>
     label: string
     description: string
 }
@@ -58,11 +58,8 @@ export function AdminShopTerminology({ shopId }: AdminShopTerminologyProps) {
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
     // Load shop data
-    useEffect(() => {
-        fetchShopTerminology()
-    }, [shopId])
+    const fetchShopTerminology = useCallback(async () => {
 
-    const fetchShopTerminology = async () => {
         try {
             const response = await fetch(`/api/admin/shops/${shopId}/terminology`)
             if (!response.ok) {
@@ -77,7 +74,11 @@ export function AdminShopTerminology({ shopId }: AdminShopTerminologyProps) {
         } finally {
             setIsLoading(false)
         }
-    }
+    }, [shopId])
+
+    useEffect(() => {
+        fetchShopTerminology()
+    }, [fetchShopTerminology])
 
     const handleFieldChange = (field: string, value: string) => {
         setOverrides(prev => {
@@ -151,7 +152,7 @@ export function AdminShopTerminology({ shopId }: AdminShopTerminologyProps) {
     }
 
     const defaultTerms = getDefaultTerminology(shop.business_type)
-    const previewTerms = useShopTerminology(shop.business_type, overrides)
+    const previewTerms = getShopTerminology(shop.business_type, overrides)
 
     return (
         <div className="max-w-4xl mx-auto">
@@ -173,7 +174,7 @@ export function AdminShopTerminology({ shopId }: AdminShopTerminologyProps) {
                 {/* Info Banner */}
                 <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-6">
                     <p className="text-sm text-blue-800">
-                        <strong>Note:</strong> Customize how this shop's terminology appears to customers.
+                        <strong>Note:</strong> Customize how this shop&apos;s terminology appears to customers.
                         Leave fields empty to use the default terminology for {shop.business_type}s.
                     </p>
                 </div>
