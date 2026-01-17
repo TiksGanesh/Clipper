@@ -281,7 +281,7 @@ export default function BookingForm({ shop, barbers, services }: Props) {
         setSubmitting(true)
 
         try {
-            console.log('[booking-form] starting soft lock + payment flow', {
+            console.log('[booking-form] starting booking flow', {
                 barberId,
                 serviceIds,
                 date,
@@ -290,43 +290,59 @@ export default function BookingForm({ shop, barbers, services }: Props) {
                 customerName: customerName.trim(),
                 customerPhone: cleanPhone,
                 totalPrice,
+                isFreeService: totalPrice === 0
             })
 
-            // Step 1: Create payment order FIRST
-            console.log('[booking-form] creating payment order...')
-            const orderRes = await fetch("/api/payments", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    amount: totalPrice,
-                    userId: cleanPhone,
-                    serviceIds: serviceIds
-                }),
-            })
+            let orderId: string | undefined
+            let orderAmount: number | undefined
 
-            if (!orderRes.ok) {
-                const errorData = await orderRes.json()
-                console.error('[booking-form] payment order creation failed', errorData)
-                setSubmitting(false)
-                throw new Error(errorData.error || "Failed to initiate payment")
+            // Step 1: Create payment order ONLY if amount > 0
+            if (totalPrice > 0) {
+                console.log('[booking-form] creating payment order for paid service...')
+                const orderRes = await fetch("/api/payments", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        amount: totalPrice,
+                        userId: cleanPhone,
+                        serviceIds: serviceIds
+                    }),
+                })
+
+                if (!orderRes.ok) {
+                    const errorData = await orderRes.json()
+                    console.error('[booking-form] payment order creation failed', errorData)
+                    setSubmitting(false)
+                    throw new Error(errorData.error || "Failed to initiate payment")
+                }
+                const order = await orderRes.json()
+                orderId = order.id
+                orderAmount = order.amount
+                console.log('[booking-form] payment order created', { orderId: order.id, amount: order.amount })
+            } else {
+                console.log('[booking-form] skipping payment for free service')
             }
-            const order = await orderRes.json()
-            console.log('[booking-form] payment order created', { orderId: order.id, amount: order.amount })
 
-            // Step 2: Create a soft lock with the order_id (pending_payment booking)
+            // Step 2: Create a soft lock with optional razorpay_order_id
             console.log('[booking-form] requesting hold on slot...')
+            const holdPayload: any = {
+                barber_id: barberId,
+                service_ids: serviceIds,
+                date: date,
+                slot_time: selectedSlot,
+                timezone_offset: timezoneOffset,
+            }
+
+            // Only add payment details if amount > 0
+            if (totalPrice > 0 && orderId) {
+                holdPayload.razorpay_order_id = orderId
+                holdPayload.amount = totalPrice
+            }
+
             const holdRes = await fetch('/api/bookings/hold', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    barber_id: barberId,
-                    service_ids: serviceIds,
-                    date: date,
-                    slot_time: selectedSlot,
-                    timezone_offset: timezoneOffset,
-                    razorpay_order_id: order.id,
-                    amount: totalPrice
-                }),
+                body: JSON.stringify(holdPayload),
             })
 
             if (!holdRes.ok) {
@@ -349,7 +365,22 @@ export default function BookingForm({ shop, barbers, services }: Props) {
             console.log('[booking-form] slot hold successful', { bookingId })
             setHoldBookingId(bookingId)
 
-            // Step 3: Open Razorpay payment UI
+            // Step 3: For free services, directly confirm the booking
+            if (totalPrice === 0) {
+                console.log('[booking-form] confirming free service booking...')
+                setPaymentStatus('processing')
+                setSubmitting(false)
+                
+                await confirmBookingFromHold(
+                    '', // No payment ID for free services
+                    '', // No order ID for free services
+                    cleanPhone,
+                    bookingId
+                )
+                return
+            }
+
+            // Step 4: For paid services, open Razorpay payment UI
             const razorpayKeyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
             if (!razorpayKeyId) {
                 setSubmitting(false)
@@ -358,11 +389,11 @@ export default function BookingForm({ shop, barbers, services }: Props) {
 
             const options = {
                 key: razorpayKeyId,
-                amount: order.amount,
+                amount: orderAmount,
                 currency: "INR",
                 name: shop.name,
                 description: selectedServiceName,
-                order_id: order.id,
+                order_id: orderId,
                 handler: async function (response: any) {
                     // Immediately show processing overlay
                     setPaymentStatus('processing')

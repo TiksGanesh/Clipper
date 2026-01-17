@@ -82,8 +82,9 @@ export function AdminShopTerminology({ shopId }: AdminShopTerminologyProps) {
     const handleFieldChange = (field: string, value: string) => {
         setOverrides(prev => {
             const updated = { ...prev }
-            if (value.trim()) {
-                updated[field] = value.trim()
+            // Preserve user-entered spacing; only drop the key when input is effectively empty
+            if (value.trim().length > 0) {
+                updated[field] = value
             } else {
                 delete updated[field]
             }

@@ -5,7 +5,7 @@ import { createServiceSupabaseClient } from "@/lib/supabase";
 
 // Validation schema
 const paymentSchema = z.object({
-  amount: z.number().positive().max(100000),
+  amount: z.number().nonnegative().max(100000),
   userId: z.string().min(1).max(255),
   serviceIds: z.array(z.string().uuid()).min(1).max(20)
 });

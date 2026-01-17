@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
 import { saveBarbersAction } from '@/app/setup/actions'
 import type { Database } from '@/types/database'
+import { useShopTerminology, type BusinessType } from '@/src/hooks/useShopTerminology'
 
 export default async function SetupBarbersPage() {
     const user = await requireAuth()
@@ -22,34 +23,40 @@ export default async function SetupBarbersPage() {
 
     const { data: shop } = await supabase
         .from('shops')
-        .select('id')
+        .select('id, business_type, terminology_overrides')
         .eq('owner_id', user.id)
         .is('deleted_at', null)
-        .maybeSingle<ShopId>()
+        .maybeSingle()
 
     if (!shop?.id) {
         redirect('/setup/shop')
     }
 
+    // Get terminology for this shop
+    const terms = useShopTerminology(
+        (shop as any).business_type || 'barber',
+        (shop as any).terminology_overrides
+    )
+
     return (
         <div className="max-w-lg mx-auto py-10">
-            <h1 className="text-2xl font-bold mb-6">Step 2: Add Barbers (max 2)</h1>
+            <h1 className="text-2xl font-bold mb-6">Step 2: Add {terms.staff_label}s (max 2)</h1>
             <form action={saveBarbersAction} className="space-y-4">
                 <div className="grid grid-cols-1 gap-4">
                     <div>
-                        <label className="block text-sm font-medium">Barber 1 Name</label>
+                        <label className="block text-sm font-medium">{terms.staff_label} 1 Name</label>
                         <input 
                             name="barber1" 
                             required 
                             maxLength={100}
                             minLength={2}
-                            pattern="[A-Za-z\s]+"
-                            title="Barber name should be 2-100 characters (letters and spaces only)"
+                            pattern="[A-Za-z\s.,'\-]+"
+                            title={`${terms.staff_label} name should be 2-100 characters (letters and spaces only)`}
                             className="mt-1 w-full border px-3 py-2 rounded" 
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium">Barber 1 Phone (optional)</label>
+                        <label className="block text-sm font-medium">{terms.staff_label} 1 Phone (optional)</label>
                         <input 
                             name="phone1" 
                             type="tel"
@@ -61,18 +68,18 @@ export default async function SetupBarbersPage() {
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium">Barber 2 Name (optional)</label>
+                        <label className="block text-sm font-medium">{terms.staff_label} 2 Name (optional)</label>
                         <input 
                             name="barber2" 
                             maxLength={100}
                             minLength={2}
-                            pattern="[A-Za-z\s]+"
-                            title="Barber name should be 2-100 characters (letters and spaces only)"
+                            pattern="[A-Za-z\s.,'\-]+"
+                            title={`${terms.staff_label} name should be 2-100 characters (letters and spaces only)`}
                             className="mt-1 w-full border px-3 py-2 rounded" 
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium">Barber 2 Phone (optional)</label>
+                        <label className="block text-sm font-medium">{terms.staff_label} 2 Phone (optional)</label>
                         <input 
                             name="phone2" 
                             type="tel"

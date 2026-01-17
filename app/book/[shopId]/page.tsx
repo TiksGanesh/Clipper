@@ -3,6 +3,7 @@ import BookingForm from '@/components/booking/BookingForm'
 import { createServiceSupabaseClient } from '@/lib/supabase'
 import { getShopClosure, formatClosurePeriod } from '@/lib/shop-closure'
 import BookingErrorPage from '@/components/booking/BookingErrorPage'
+import { useShopTerminology, type BusinessType } from '@/src/hooks/useShopTerminology'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -13,7 +14,7 @@ export default async function PublicBookingPage({ params }: { params: { shopId: 
     // First, get the shop
     const { data: shop, error: shopError } = await supabase
         .from('shops')
-        .select('id, name, address, phone, deleted_at')
+        .select('id, name, address, phone, business_type, terminology_overrides, deleted_at')
         .eq('id', params.shopId)
         .maybeSingle()
 
@@ -23,6 +24,12 @@ export default async function PublicBookingPage({ params }: { params: { shopId: 
 
     const shopData = shop as any
     const shopIdValue = shopData.id
+
+    // Get terminology for this shop
+    const terms = useShopTerminology(
+        shopData.business_type || 'barber',
+        shopData.terminology_overrides
+    )
 
     // Separately fetch subscription with explicit filter
     const { data: subscriptions, error: subError } = await supabase
@@ -149,7 +156,7 @@ export default async function PublicBookingPage({ params }: { params: { shopId: 
                         <h2 className="text-xl font-semibold text-yellow-900 mb-2">Currently Unavailable</h2>
                         <p className="text-yellow-800">
                             {!barbers || barbers.length === 0
-                                ? 'No barbers are currently available for booking.'
+                                ? `No ${terms.staff_label.toLowerCase()}s are currently available for booking.`
                                 : 'No services are currently available for booking.'}
                         </p>
                         <p className="text-yellow-700 mt-2">Please contact the shop directly or try again later.</p>

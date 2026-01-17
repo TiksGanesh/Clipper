@@ -17,7 +17,7 @@ const holdSchema = z.object({
     slot_time: z.string().datetime('Invalid slot time'),
     timezone_offset: z.number().int().min(-720).max(720).optional(),
     razorpay_order_id: z.string().optional(),
-    amount: z.number().positive().max(1000000).optional()
+    amount: z.number().nonnegative().max(1000000).optional()
 })
 
 const HOLD_DURATION_MINUTES = 10

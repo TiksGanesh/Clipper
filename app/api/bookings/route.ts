@@ -17,7 +17,7 @@ const bookingSchema = z.object({
     timezone_offset: z.number().int().min(-720).max(720).optional(),
     razorpay_payment_id: z.string().optional(),
     razorpay_order_id: z.string().optional(),
-    amount: z.number().positive().max(1000000).optional(),
+    amount: z.number().nonnegative().max(1000000).optional(),
     booking_id: z.string().uuid('Invalid booking ID').optional()
 }).refine(data => data.service_id || (data.service_ids && data.service_ids.length > 0), {
     message: 'Either service_id or service_ids must be provided',

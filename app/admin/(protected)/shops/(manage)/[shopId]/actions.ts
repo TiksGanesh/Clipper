@@ -1,12 +1,16 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 import { createServiceSupabaseClient } from '@/lib/supabase'
 import { requireAdminContext } from '@/lib/auth'
 
 // Constants for trial extensions and reactivation
 const TRIAL_EXTENSION_DAYS = 30
 const REACTIVATION_EXTENSION_DAYS = 30
+
+const BUSINESS_TYPES = ['barber', 'salon', 'clinic'] as const
+type BusinessType = typeof BUSINESS_TYPES[number]
 
 type ActionResult = {
     success: boolean
@@ -196,6 +200,106 @@ export async function reactivateShopAction(shopId: string): Promise<ActionResult
         console.error('reactivateShopAction error:', error)
         return { success: false, error: 'Failed to reactivate shop. Please try again.' }
     }
+}
+
+/**
+ * Update shop business type (enum: barber | salon | clinic)
+ */
+export async function updateBusinessTypeAction(formData: FormData) {
+    await requireAdminContext()
+    const supabase = createServiceSupabaseClient()
+
+    const shopId = String(formData.get('shopId') || '').trim()
+    const businessType = String(formData.get('businessType') || '').trim() as BusinessType
+
+    if (!shopId) {
+        throw new Error('Shop ID is required')
+    }
+
+    if (!BUSINESS_TYPES.includes(businessType)) {
+        throw new Error('Invalid business type')
+    }
+
+    const { error } = await supabase
+        .from('shops')
+        // @ts-ignore service client type inference
+        .update({ business_type: businessType, updated_at: new Date().toISOString() })
+        .eq('id', shopId)
+        .is('deleted_at', null)
+
+    if (error) {
+        throw new Error(`Failed to update business type: ${error.message}`)
+    }
+
+    revalidatePath(`/admin/shops/${shopId}`)
+    revalidatePath('/admin/shops')
+    revalidatePath(`/book/${shopId}`)
+
+    redirect(`/admin/shops/${shopId}?success=Business%20type%20updated`)
+}
+
+/**
+ * Update shop slug (unique, max 25 chars, alphanumeric + hyphen only)
+ */
+export async function updateShopSlugAction(formData: FormData) {
+    await requireAdminContext()
+    const supabase = createServiceSupabaseClient()
+
+    const shopId = String(formData.get('shopId') || '').trim()
+    const slug = String(formData.get('slug') || '').trim().toLowerCase()
+
+    if (!shopId) {
+        throw new Error('Shop ID is required')
+    }
+
+    if (!slug) {
+        throw new Error('Slug is required')
+    }
+
+    // Validate slug format: max 25 chars, alphanumeric + hyphen only
+    if (slug.length > 25) {
+        throw new Error('Slug must be 25 characters or less')
+    }
+
+    if (!/^[a-z0-9-]+$/.test(slug)) {
+        throw new Error('Slug can only contain lowercase letters, numbers, and hyphens')
+    }
+
+    if (slug.startsWith('-') || slug.endsWith('-')) {
+        throw new Error('Slug cannot start or end with a hyphen')
+    }
+
+    // Check for uniqueness
+    const { data: existing } = await supabase
+        .from('shops')
+        .select('id')
+        .eq('slug', slug)
+        .neq('id', shopId)
+        .is('deleted_at', null)
+        .maybeSingle()
+
+    if (existing) {
+        throw new Error('This slug is already taken by another shop')
+    }
+
+    // Update slug
+    const { error } = await supabase
+        .from('shops')
+        // @ts-ignore service client type inference
+        .update({ slug, updated_at: new Date().toISOString() })
+        .eq('id', shopId)
+        .is('deleted_at', null)
+
+    if (error) {
+        throw new Error(`Failed to update slug: ${error.message}`)
+    }
+
+    revalidatePath(`/admin/shops/${shopId}`)
+    revalidatePath('/admin/shops')
+    revalidatePath(`/book/${shopId}`)
+    revalidatePath(`/shop/${slug}`)
+
+    redirect(`/admin/shops/${shopId}?success=Slug%20updated`)
 }
 
 /**

@@ -1,7 +1,6 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
-import type { Database } from '@/types/database'
+import { createServiceSupabaseClient } from '@/lib/supabase'
+import { assertAdminSession } from '@/lib/auth'
 
 interface TerminologyOverrides {
     staff_label?: string
@@ -20,23 +19,10 @@ export async function PATCH(
     { params }: { params: { shopId: string } }
 ) {
     try {
-        const supabase = createRouteHandlerClient<Database>({ cookies })
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        const adminSession = await assertAdminSession()
+        if (adminSession instanceof NextResponse) return adminSession
 
-        if (authError || !user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-        }
-
-        // Check if user is admin
-        const { data: adminUser, error: adminError } = await supabase
-            .from('admin_users')
-            .select('id')
-            .eq('user_id', user.id)
-            .single()
-
-        if (adminError || !adminUser) {
-            return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 })
-        }
+        const supabase = createServiceSupabaseClient()
 
         const { terminology_overrides } = await request.json() as {
             terminology_overrides: TerminologyOverrides | null
@@ -74,11 +60,15 @@ export async function PATCH(
             })
             .eq('id', params.shopId)
             .select('id, name, business_type, terminology_overrides')
-            .single()
+            .maybeSingle()
 
         if (error) {
             console.error('Error updating terminology:', error)
             return NextResponse.json({ error: 'Failed to update terminology' }, { status: 500 })
+        }
+
+        if (!data) {
+            return NextResponse.json({ error: 'Shop not found' }, { status: 404 })
         }
 
         return NextResponse.json({
@@ -101,23 +91,10 @@ export async function GET(
     { params }: { params: { shopId: string } }
 ) {
     try {
-        const supabase = createRouteHandlerClient<Database>({ cookies })
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        const adminSession = await assertAdminSession()
+        if (adminSession instanceof NextResponse) return adminSession
 
-        if (authError || !user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-        }
-
-        // Check if user is admin
-        const { data: adminUser, error: adminError } = await supabase
-            .from('admin_users')
-            .select('id')
-            .eq('user_id', user.id)
-            .single()
-
-        if (adminError || !adminUser) {
-            return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 })
-        }
+        const supabase = createServiceSupabaseClient()
 
         // Fetch shop terminology
         const { data: shop, error } = await supabase
