@@ -146,7 +146,7 @@ export default function AppointmentDetailSheet({
                                     }}
                                     className="w-full bg-green-600 text-white font-medium py-3 px-4 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
                                 >
-                                    ✂️ Seat Customer
+                                    Seat {customerLabel}
                                 </button>
                                 <button
                                     type="button"
@@ -156,7 +156,7 @@ export default function AppointmentDetailSheet({
                                     }}
                                     className="w-full bg-white text-gray-700 font-medium py-3 px-4 rounded-lg border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
                                 >
-                                    ❌ No-show
+                                    No-show
                                 </button>
                                 <button
                                     type="button"

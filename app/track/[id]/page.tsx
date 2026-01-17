@@ -5,6 +5,7 @@ import useSWR from 'swr'
 import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 import ShopGuidelines from '@/components/booking/ShopGuidelines'
+import { useShopTerminology, type BusinessType } from '@/src/hooks/useShopTerminology'
 
 type TrackingResponse = {
     booking: {
@@ -25,17 +26,18 @@ type TrackingResponse = {
         current_activity: string
         timestamp: string
     }
+    business_type?: BusinessType
 }
 
 // Helper Components for Status Cards
-const ServiceCompletedCard = () => (
+const ServiceCompletedCard = ({ serviceLabel }: { serviceLabel: string }) => (
     <motion.div
         initial={{ scale: 0.9 }}
         animate={{ scale: 1 }}
         className="bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-2xl p-6 text-center"
     >
         <div className="text-5xl mb-3">✅</div>
-        <h2 className="text-2xl font-bold mb-2">Service Completed</h2>
+        <h2 className="text-2xl font-bold mb-2">{serviceLabel} Completed</h2>
         <p className="text-gray-50">Thank you for visiting!</p>
     </motion.div>
 )
@@ -64,15 +66,14 @@ const ExpiredCard = () => (
     </motion.div>
 )
 
-const ServiceInProgressCard = () => (
+const ServiceInProgressCard = ({ serviceLabel }: { serviceLabel: string }) => (
     <motion.div
         initial={{ scale: 0.9 }}
         animate={{ scale: 1 }}
         className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-2xl p-6 text-center"
     >
-        <div className="text-5xl mb-3">✂️</div>
-        <h2 className="text-2xl font-bold mb-2">Service in Progress</h2>
-        <p className="text-blue-50">Your service is underway</p>
+        <h2 className="text-2xl font-bold mb-2">{serviceLabel} in Progress</h2>
+        <p className="text-blue-50">Your {serviceLabel.toLowerCase()} is underway</p>
     </motion.div>
 )
 
@@ -127,11 +128,12 @@ function renderStatusCard(
     status: string,
     queue_position: number,
     people_ahead: number,
-    current_activity: string
+    current_activity: string,
+    serviceLabel: string
 ) {
     // Priority order: completed > cancelled > expired > seated > queue_position === 1 > default
     if (status === 'completed') {
-        return <ServiceCompletedCard />
+        return <ServiceCompletedCard serviceLabel={serviceLabel} />
     }
     if (status === 'canceled' || status === 'cancelled') {
         return <BookingCancelledCard />
@@ -140,7 +142,7 @@ function renderStatusCard(
         return <ExpiredCard />
     }
     if (status === 'seated') {
-        return <ServiceInProgressCard />
+        return <ServiceInProgressCard serviceLabel={serviceLabel} />
     }
     if (queue_position === 1) {
         return <YouAreNextCard />
@@ -195,10 +197,15 @@ export default function TrackBookingPage() {
 
     const [showContent, setShowContent] = useState(false)
     const [copiedId, setCopiedId] = useState(false)
+    const [businessType, setBusinessType] = useState<BusinessType>('barber')
+    const terms = useShopTerminology(businessType)
 
     useEffect(() => {
         if (data) {
             setShowContent(true)
+            if (data.business_type) {
+                setBusinessType(data.business_type)
+            }
         }
     }, [data])
 
@@ -297,7 +304,7 @@ export default function TrackBookingPage() {
                     {/* Main Content */}
                     <div className="p-6 sm:p-8 space-y-8">
                         {/* Status Card - Strict Priority Rendering */}
-                        {renderStatusCard(booking.status, live_status.queue_position, live_status.people_ahead, live_status.current_activity)}
+                        {renderStatusCard(booking.status, live_status.queue_position, live_status.people_ahead, live_status.current_activity, terms.service_label)}
 
                         {/* Expected Start Time */}
                         {booking.status !== 'completed' && booking.status !== 'canceled' && booking.status !== 'cancelled' && booking.status !== 'expired' && (
@@ -340,7 +347,7 @@ export default function TrackBookingPage() {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <p className="text-xs text-gray-600 mb-1">Customer</p>
+                                    <p className="text-xs text-gray-600 mb-1">{terms.customer_label}</p>
                                     <p className="font-medium text-gray-900">{booking.customer_name}</p>
                                 </div>
                                 <div>

@@ -24,6 +24,7 @@ type TrackingResponse = {
         current_activity: string
         timestamp: string
     }
+    business_type?: BusinessType
     debug_queue?: Array<{ id: string; status: string; start_time: string }>
 }
 
@@ -303,7 +304,8 @@ export async function GET(request: NextRequest) {
                         people_ahead: 0,
                         current_activity: 'Completed',
                         timestamp: new Date().toISOString(),
-                    }
+                    },
+                    business_type: businessType
                 },
                 {
                     headers: {
@@ -419,7 +421,8 @@ export async function GET(request: NextRequest) {
                 people_ahead: peopleAhead || 0,
                 current_activity: currentActivity,
                 timestamp: new Date().toISOString(),
-            }
+            },
+            business_type: businessType
         }
 
         if (debugQueue) {

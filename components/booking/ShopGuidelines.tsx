@@ -48,7 +48,7 @@ export default function ShopGuidelines({ compact = false }: ShopGuidelinesProps)
                 <span aria-hidden="true" className="text-lg text-purple-600">
                     💡
                 </span>
-                <h2 className="text-lg font-bold text-gray-800">Shop Guidelines</h2>
+                <h2 className="text-lg font-bold text-gray-800">Guidelines</h2>
             </div>
 
             {/* Mobile Ticker View */}
