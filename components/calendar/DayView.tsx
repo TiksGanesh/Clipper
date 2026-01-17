@@ -9,6 +9,7 @@ import {
     markBookingNoShowAction,
     createBreakAction,
 } from '@/app/barber/calendar/actions'
+import { useShopTerminology, type BusinessType } from '@/src/hooks/useShopTerminology'
 import WeekView from './WeekView'
 import AppointmentDetailSheet from './AppointmentDetailSheet'
 
@@ -199,6 +200,26 @@ export default function DayView({ barbers, initialDate, initialBarberId, isReadO
     const [isCreateOpen, setIsCreateOpen] = useState(false)
     const [isBarberPickerOpen, setIsBarberPickerOpen] = useState(false)
     const [createType, setCreateType] = useState<'client' | 'break'>('client')
+    const [businessType, setBusinessType] = useState<BusinessType>('barber')
+    const [terminologyOverrides, setTerminologyOverrides] = useState(null)
+    const terms = useShopTerminology(businessType, terminologyOverrides)
+
+    // Fetch shop business type and terminology on mount
+    useEffect(() => {
+        const fetchShopInfo = async () => {
+            try {
+                const res = await fetch('/api/shop/info')
+                if (res.ok) {
+                    const data = await res.json()
+                    setBusinessType((data.business_type as BusinessType) || 'barber')
+                    setTerminologyOverrides(data.terminology_overrides || null)
+                }
+            } catch (err) {
+                console.error('Failed to fetch shop info:', err)
+            }
+        }
+        fetchShopInfo()
+    }, [])
 
     useEffect(() => {
         const param = searchParams.get('barber')
@@ -767,6 +788,8 @@ export default function DayView({ barbers, initialDate, initialBarberId, isReadO
                     })}
                     duration={Math.round((new Date(selectedBooking.end_time).getTime() - new Date(selectedBooking.start_time).getTime()) / 60000)}
                     isWalkIn={selectedBooking.is_walk_in}
+                    staffLabel={terms.staff_label}
+                    customerLabel={terms.customer_label}
                     onSeatCustomer={() => handleBookingAction(selectedBooking.id, 'seated')}
                     onMarkCompleted={() => handleBookingAction(selectedBooking.id, 'completed')}
                     onMarkNoShow={() => handleBookingAction(selectedBooking.id, 'no_show')}

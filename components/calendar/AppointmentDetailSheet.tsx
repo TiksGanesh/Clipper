@@ -15,6 +15,8 @@ type Props = {
     dateTime: string
     duration: number
     isWalkIn?: boolean
+    staffLabel?: string
+    customerLabel?: string
     // Actions
     onSeatCustomer?: () => void
     onMarkCompleted?: () => void
@@ -43,6 +45,8 @@ export default function AppointmentDetailSheet({
     dateTime,
     duration,
     isWalkIn = false,
+    staffLabel = 'Barber',
+    customerLabel = 'Customer',
     onSeatCustomer,
     onMarkCompleted,
     onMarkNoShow,
@@ -87,7 +91,7 @@ export default function AppointmentDetailSheet({
                     <div className="p-4 md:p-6 space-y-4 border-b border-gray-200">
                         <div className="space-y-3">
                             <div>
-                                <p className="text-sm text-gray-600">Customer Name</p>
+                                <p className="text-sm text-gray-600">{customerLabel} Name</p>
                                 <p className="text-base font-medium text-gray-900 mt-1">
                                     {customerName}
                                     {isWalkIn && (
@@ -108,7 +112,7 @@ export default function AppointmentDetailSheet({
                             )}
 
                             <div>
-                                <p className="text-sm text-gray-600">Barber</p>
+                                <p className="text-sm text-gray-600">{staffLabel}</p>
                                 <p className="text-base font-medium text-gray-900 mt-1">
                                     {barberName}
                                 </p>
