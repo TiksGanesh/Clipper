@@ -11,7 +11,7 @@ export type SetupPendingShop = {
  * Returns up to 10 shops with owner email/phone, shop_id, shop_name, created_at.
  */
 export async function getLatestSetupPendingShops(limit = 10): Promise<SetupPendingShop[]> {
-  const supabase = await createServerSupabaseClient()
+  const supabase = createServiceSupabaseClient()
 
   // Get shops (not deleted)
   const { data: shops, error: shopsError } = await supabase
@@ -73,7 +73,7 @@ export async function getLatestSetupPendingShops(limit = 10): Promise<SetupPendi
     created_at: shop.created_at,
   }))
 }
-import { createServerSupabaseClient } from '@/lib/supabase'
+import { createServiceSupabaseClient } from '@/lib/supabase'
 
 export type ShopAdminDashboardCounts = {
   total: number
@@ -90,7 +90,7 @@ export type ShopAdminDashboardCounts = {
  * - States: setup_pending, trial, active, suspended, expired
  */
 export async function getShopAdminDashboardCounts(): Promise<ShopAdminDashboardCounts> {
-  const supabase = await createServerSupabaseClient()
+  const supabase = createServiceSupabaseClient()
 
   // 1. Get all shops (not deleted)
   const { data: shops, error: shopsError } = await supabase

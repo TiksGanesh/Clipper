@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from "@/lib/supabase";
+import { createServiceSupabaseClient } from "@/lib/supabase";
 
 export interface ShopSetupStatus {
   barbersConfigured: boolean;
@@ -12,7 +12,7 @@ export interface ShopSetupStatus {
  * Checks for at least 1 barber (max 2), at least 1 service, and working hours configured.
  */
 export async function getShopSetupStatus(shopId: string): Promise<ShopSetupStatus> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServiceSupabaseClient();
 
   // Barbers: at least 1, max 2
   const { count: barberCount } = await supabase

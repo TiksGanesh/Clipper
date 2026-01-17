@@ -16,7 +16,7 @@ export async function getAdminShopListWithPagination({ status, search, page = 1 
   const items = await getAdminShopList({ status, search, limit, offset })
 
   // Get total count (with filters)
-  const supabase = await createServerSupabaseClient()
+  const supabase = createServiceSupabaseClient()
   let shopQuery = supabase
     .from('shops')
     .select('id', { count: 'exact', head: true })
@@ -42,7 +42,7 @@ export async function getAdminShopListWithPagination({ status, search, page = 1 
     has_next_page: offset + items.length < filteredCount,
   }
 }
-import { createServerSupabaseClient } from '@/lib/supabase'
+import { createServiceSupabaseClient } from '@/lib/supabase'
 
 export type AdminShopListItem = {
   shop_id: string
@@ -66,7 +66,7 @@ export type AdminShopListParams = {
  * Supports status and search filters. Returns owner contact, status, sub end, created_at.
  */
 export async function getAdminShopList({ status, search, limit = 20, offset = 0 }: AdminShopListParams): Promise<AdminShopListItem[]> {
-  const supabase = await createServerSupabaseClient()
+  const supabase = createServiceSupabaseClient()
 
   // 1. Get all shops (not deleted)
   let shopQuery = supabase

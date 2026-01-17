@@ -15,6 +15,8 @@ type Props = {
     dateTime: string
     duration: number
     isWalkIn?: boolean
+    staffLabel?: string
+    customerLabel?: string
     // Actions
     onSeatCustomer?: () => void
     onMarkCompleted?: () => void
@@ -43,6 +45,8 @@ export default function AppointmentDetailSheet({
     dateTime,
     duration,
     isWalkIn = false,
+    staffLabel = 'Barber',
+    customerLabel = 'Customer',
     onSeatCustomer,
     onMarkCompleted,
     onMarkNoShow,
@@ -87,7 +91,7 @@ export default function AppointmentDetailSheet({
                     <div className="p-4 md:p-6 space-y-4 border-b border-gray-200">
                         <div className="space-y-3">
                             <div>
-                                <p className="text-sm text-gray-600">Customer Name</p>
+                                <p className="text-sm text-gray-600">{customerLabel} Name</p>
                                 <p className="text-base font-medium text-gray-900 mt-1">
                                     {customerName}
                                     {isWalkIn && (
@@ -108,7 +112,7 @@ export default function AppointmentDetailSheet({
                             )}
 
                             <div>
-                                <p className="text-sm text-gray-600">Barber</p>
+                                <p className="text-sm text-gray-600">{staffLabel}</p>
                                 <p className="text-base font-medium text-gray-900 mt-1">
                                     {barberName}
                                 </p>
@@ -142,7 +146,7 @@ export default function AppointmentDetailSheet({
                                     }}
                                     className="w-full bg-green-600 text-white font-medium py-3 px-4 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
                                 >
-                                    ✂️ Seat Customer
+                                    Seat {customerLabel}
                                 </button>
                                 <button
                                     type="button"
@@ -152,7 +156,7 @@ export default function AppointmentDetailSheet({
                                     }}
                                     className="w-full bg-white text-gray-700 font-medium py-3 px-4 rounded-lg border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
                                 >
-                                    ❌ No-show
+                                    No-show
                                 </button>
                                 <button
                                     type="button"

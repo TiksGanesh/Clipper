@@ -1,11 +1,13 @@
 
-import { createServerSupabaseClient } from "@/lib/supabase";
+import { createServiceSupabaseClient } from "@/lib/supabase";
 import type { Database } from "@/types/database";
 
 
 export interface AdminShopDetail {
   shop_id: string;
   shop_name: string;
+  slug: string;
+  business_type: 'barber' | 'salon' | 'clinic';
   status: string;
   owner_email: string | null;
   owner_phone: string | null;
@@ -20,7 +22,7 @@ export interface AdminShopDetail {
  * Throws error if not found.
  */
 export async function getAdminShopDetailById(shopId: string): Promise<AdminShopDetail> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServiceSupabaseClient();
 
   // Restore joins for owner and subscription
   // Fetch shop and subscription in one query
@@ -29,6 +31,8 @@ export async function getAdminShopDetailById(shopId: string): Promise<AdminShopD
     .select(`
       id,
       name,
+      slug,
+      business_type,
       created_at,
       owner_id,
       subscription:subscriptions!subscriptions_shop_id_fkey(current_period_start, current_period_end, status)
@@ -39,6 +43,8 @@ export async function getAdminShopDetailById(shopId: string): Promise<AdminShopD
       data: {
         id: string;
         name: string;
+        slug: string;
+        business_type: 'barber' | 'salon' | 'clinic';
         created_at: string;
         owner_id: string;
         subscription?: {
@@ -79,6 +85,8 @@ export async function getAdminShopDetailById(shopId: string): Promise<AdminShopD
   return {
     shop_id: data.id,
     shop_name: data.name,
+    slug: data.slug,
+    business_type: data.business_type,
     status: data.subscription?.status ?? "unknown",
     owner_email,
     owner_phone,

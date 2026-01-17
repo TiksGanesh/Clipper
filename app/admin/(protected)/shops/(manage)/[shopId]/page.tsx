@@ -2,6 +2,7 @@
 
 import { requireAdminContext } from "@/lib/auth";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { getAdminShopDetailById } from "@/lib/admin-shop-detail";
 import { getShopSetupStatus } from "@/lib/shop-setup-status";
 import { getShopRelatedData } from "@/lib/shop-related-data";
@@ -10,7 +11,9 @@ import {
     extendTrialAction, 
     reactivateShopAction, 
     suspendShopAction, 
-    emergencyDisableAction 
+    emergencyDisableAction,
+    updateBusinessTypeAction,
+    updateShopSlugAction
 } from './actions';
 
 interface PageProps {
@@ -56,10 +59,12 @@ export default async function Page({ params, searchParams }: PageProps) {
         // Provide fallback data to prevent crashes
         shop = { 
             shop_id: shopId, 
-            shop_name: 'Unknown', 
+            shop_name: 'Unknown',
+            slug: 'unknown', 
             owner_email: null, 
             owner_phone: '', 
             status: 'unknown' as any,
+            business_type: 'barber',
             subscription_start: null,
             subscription_end: null,
             created_at: ''
@@ -108,7 +113,15 @@ export default async function Page({ params, searchParams }: PageProps) {
 
     return (
         <main>
-            <h1 className="text-xl font-semibold mb-6">Shop Details</h1>
+            <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
+                <h1 className="text-xl font-semibold">Shop Details</h1>
+                <Link
+                    href={`/admin/shops/${shopId}/terminology`}
+                    className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+                >
+                    Customize Terminology
+                </Link>
+            </div>
 
             {searchParams?.success && (
                 <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded">
@@ -135,6 +148,10 @@ export default async function Page({ params, searchParams }: PageProps) {
                                 <div className="text-gray-900 mt-1">{shop.status}</div>
                             </div>
                             <div>
+                                <span className="font-medium text-gray-700">Business Type:</span>
+                                <div className="text-gray-900 mt-1 capitalize">{shop.business_type}</div>
+                            </div>
+                            <div>
                                 <span className="font-medium text-gray-700">Owner Contact:</span>
                                 <div className="text-gray-900 mt-1">{shop.owner_email || shop.owner_phone || "-"}</div>
                             </div>
@@ -151,6 +168,67 @@ export default async function Page({ params, searchParams }: PageProps) {
                                 <div className="text-gray-900 mt-1">{shop.subscription_end ? new Date(shop.subscription_end).toLocaleDateString() : "-"}</div>
                             </div>
                         </div>
+                    </section>
+
+                    {/* Business Type Update */}
+                    <section className="bg-white border border-gray-200 rounded-md p-4">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Business Type</h2>
+                        <form action={updateBusinessTypeAction} className="space-y-4">
+                            <input type="hidden" name="shopId" value={shopId} />
+                            <div className="space-y-2">
+                                {['barber','salon','clinic'].map((type) => (
+                                    <label key={type} className="flex items-center gap-3 text-sm text-gray-800">
+                                        <input
+                                            type="radio"
+                                            name="businessType"
+                                            value={type}
+                                            defaultChecked={shop.business_type === type}
+                                            className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                                        />
+                                        <span className="capitalize">{type}</span>
+                                    </label>
+                                ))}
+                            </div>
+                            <button
+                                type="submit"
+                                className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+                            >
+                                Update Business Type
+                            </button>
+                        </form>
+                    </section>
+
+                    {/* Shop Slug Update */}
+                    <section className="bg-white border border-gray-200 rounded-md p-4">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Shop URL Slug</h2>
+                        <form action={updateShopSlugAction} className="space-y-4">
+                            <input type="hidden" name="shopId" value={shopId} />
+                            <div>
+                                <label htmlFor="slug" className="block text-sm font-medium text-gray-700 mb-2">
+                                    Slug (max 25 characters, lowercase letters, numbers, and hyphens only)
+                                </label>
+                                <div className="text-xs text-gray-500 mb-2">
+                                    Current URL: /shop/<strong>{shop.slug}</strong>
+                                </div>
+                                <input
+                                    type="text"
+                                    id="slug"
+                                    name="slug"
+                                    defaultValue={shop.slug}
+                                    maxLength={25}
+                                    pattern="[a-z0-9-]+"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="my-shop-name"
+                                    required
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+                            >
+                                Update Slug
+                            </button>
+                        </form>
                     </section>
 
                     {/* Barbers List */}
