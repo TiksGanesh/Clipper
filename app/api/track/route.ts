@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database'
 
 type BookingStatus = Database['public']['Enums']['booking_status']
+type BusinessType = 'barber' | 'salon' | 'clinic'
 
 type TrackingResponse = {
     booking: {
@@ -24,6 +25,52 @@ type TrackingResponse = {
         timestamp: string
     }
     debug_queue?: Array<{ id: string; status: string; start_time: string }>
+}
+
+// ========================================
+// PRIVACY & ANONYMIZATION HELPERS
+// ========================================
+
+/**
+ * Anonymize customer name for privacy-sensitive business types (clinics)
+ * @param fullName - Full customer name (e.g., 'Amit Sharma')
+ * @returns Anonymized name (e.g., 'A. S.')
+ */
+function anonymizeCustomerName(fullName: string): string {
+    const parts = fullName.trim().split(/\s+/)
+    if (parts.length === 0) return 'Patient ****'
+    if (parts.length === 1) return `${parts[0][0].toUpperCase()}. ****`
+    return `${parts[0][0].toUpperCase()}. ${parts[parts.length - 1][0].toUpperCase()}.`
+}
+
+/**
+ * Get generic service name for privacy-sensitive business types (clinics)
+ * @returns Generic consultation label
+ */
+function getGenericServiceName(): string {
+    return 'Consultation'
+}
+
+/**
+ * Anonymize staff/barber name for clinics (show initials only)
+ * @param fullName - Full name (e.g., 'Dr. Sharma')
+ * @returns Anonymized name (e.g., 'Dr. S.')
+ */
+function anonymizeStaffName(fullName: string): string {
+    const parts = fullName.trim().split(/\s+/)
+    if (parts.length === 0) return 'Staff ****'
+    // Keep first word (e.g., 'Dr.'), replace others with initials
+    if (parts.length === 1) return `${parts[0][0].toUpperCase()}. ****`
+    return `${parts[0]} ${parts[parts.length - 1][0].toUpperCase()}.`
+}
+
+/**
+ * Determine if anonymization should be applied
+ * @param businessType - Business type from shops table
+ * @returns true if business_type is 'clinic'
+ */
+function shouldAnonymize(businessType: BusinessType | string | null): boolean {
+    return businessType === 'clinic'
 }
 
 // Mark this route as dynamic to prevent Next.js caching
@@ -69,7 +116,7 @@ export async function GET(request: NextRequest) {
                 { status: 500 }
             )
         }
-        
+
         const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey, {
             db: {
                 schema: 'public',
@@ -139,6 +186,9 @@ export async function GET(request: NextRequest) {
                     id,
                     name,
                     current_delay_minutes
+                ),
+                shops (
+                    business_type
                 )
             `)
             .eq('id', bookingId)
@@ -165,10 +215,14 @@ export async function GET(request: NextRequest) {
             shop_id: string
             services: { name: string; duration_minutes: number } | null
             barbers: { id: string; name: string; current_delay_minutes: number } | null
+            shops: { business_type: BusinessType | null } | null
         }
 
         const service = bookingData.services
         const barber = bookingData.barbers
+        const shop = bookingData.shops
+        const businessType = shop?.business_type || 'barber'
+        const isClinic = shouldAnonymize(businessType)
 
         if (!service || !barber) {
             return NextResponse.json(
@@ -176,6 +230,11 @@ export async function GET(request: NextRequest) {
                 { status: 500 }
             )
         }
+
+        // Prepare anonymized or regular data based on business type
+        const displayCustomerName = isClinic ? anonymizeCustomerName(bookingData.customer_name) : bookingData.customer_name
+        const displayServiceName = isClinic ? getGenericServiceName() : service.name
+        const displayBarberName = isClinic ? anonymizeStaffName(barber.name) : barber.name
 
         const bookingStartTime = new Date(bookingData.start_time)
 
@@ -185,11 +244,11 @@ export async function GET(request: NextRequest) {
         const now = new Date()
         const nowIST = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }))
         const bookingDateIST = new Date(bookingStartTime.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }))
-        
+
         // Get start of today in IST
         const todayIST = new Date(bookingDateIST)
         todayIST.setHours(0, 0, 0, 0)
-        
+
         // Get start of current day in IST
         const currentDayIST = new Date(nowIST)
         currentDayIST.setHours(0, 0, 0, 0)
@@ -201,7 +260,7 @@ export async function GET(request: NextRequest) {
                     status: 'expired',
                     message: 'This tracking link has expired.',
                     booking: {
-                        date: bookingStartTime.toLocaleDateString('en-IN', { 
+                        date: bookingStartTime.toLocaleDateString('en-IN', {
                             timeZone: 'Asia/Kolkata',
                             year: 'numeric',
                             month: 'long',
@@ -230,9 +289,9 @@ export async function GET(request: NextRequest) {
                     booking: {
                         id: bookingData.id,
                         original_start: formatTime(bookingStartTime),
-                        service_name: service.name,
-                        barber_name: barber.name,
-                        customer_name: bookingData.customer_name,
+                        service_name: displayServiceName,
+                        barber_name: displayBarberName,
+                        customer_name: displayCustomerName,
                         status: bookingData.status,
                         duration_minutes: service.duration_minutes,
                     },
@@ -323,7 +382,8 @@ export async function GET(request: NextRequest) {
             }
             const currentService = currentBookingData.services
             if (currentService?.name) {
-                currentActivity = `Serving a ${currentService.name}`
+                const activityService = isClinic ? getGenericServiceName() : currentService.name
+                currentActivity = `Serving a ${activityService}`
             }
         }
 
@@ -345,9 +405,9 @@ export async function GET(request: NextRequest) {
             booking: {
                 id: bookingData.id,
                 original_start: formatTime(bookingStartTime),
-                service_name: service.name,
-                barber_name: barber.name,
-                customer_name: bookingData.customer_name,
+                service_name: displayServiceName,
+                barber_name: displayBarberName,
+                customer_name: displayCustomerName,
                 status: bookingData.status,
                 duration_minutes: service.duration_minutes,
             },

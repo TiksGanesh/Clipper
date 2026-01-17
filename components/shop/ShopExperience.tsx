@@ -4,11 +4,12 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Database } from '@/types/database';
+import { useShopTerminology, BusinessType } from '@/src/hooks/useShopTerminology';
 
 type Shop = Database['public']['Tables']['shops']['Row'];
 
 interface ShopExperienceProps {
-    shop: Shop;
+    shop: Shop & { business_type?: string; terminology_overrides?: any };
 }
 
 /**
@@ -22,6 +23,12 @@ export function ShopExperience({ shop }: ShopExperienceProps) {
     const canNavigate = Boolean(safeSlug);
     const bookingHref = canNavigate ? `/shop/${safeSlug}/book` : '#';
     const trackHref = canNavigate ? `/shop/${safeSlug}/track` : '#';
+
+    // Get dynamic terminology based on business type
+    const terms = useShopTerminology(
+        (shop.business_type as BusinessType) || 'barber',
+        shop.terminology_overrides
+    );
 
     // Auto-hide splash screen after 1.5 seconds
     useEffect(() => {
@@ -127,7 +134,7 @@ export function ShopExperience({ shop }: ShopExperienceProps) {
                                 className={`block w-full py-3 px-6 rounded-lg font-semibold text-white transition-transform hover:scale-105 active:scale-95 ${!canNavigate ? 'pointer-events-none opacity-60' : ''}`}
                                 style={{ backgroundColor: shop.brand_color }}
                             >
-                                Book Appointment
+                                {terms.booking_action}
                             </Link>
 
                             {/* Track Booking Button */}
@@ -150,7 +157,7 @@ export function ShopExperience({ shop }: ShopExperienceProps) {
                                     borderWidth: '2px',
                                 }}
                             >
-                                Barber Login
+                                {terms.staff_label} Login
                             </Link>
                         </div>
                     </div>
